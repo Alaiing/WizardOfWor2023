@@ -17,6 +17,8 @@ namespace WizardOfWor
         public const int CAN_MOVE = 0;
         public const int CANT_MOVE_RIGHT = 1;
         public const int CANT_MOVE_DOWN = 2;
+        public const float TIME_BETWEEN_ACCELERATIONS = 10;
+        public const int MAX_THRESHOLDS = 3;
 
         public struct CanMoveData
         {
@@ -44,6 +46,10 @@ namespace WizardOfWor
         private GraphicsDevice _graphicsDevice;
         private SpriteBatch _spriteBatch;
 
+        private float _elapsedTime;
+        private int _currentThreshold;
+        public int CurrentThreshold => _currentThreshold;
+
         public Level(string asset, int cellWidth, int cellHeight, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
             string[] lines = System.IO.File.ReadAllLines(asset);
@@ -69,8 +75,24 @@ namespace WizardOfWor
             Draw();
         }
 
+        public void Reset()
+        {
+            _elapsedTime = 0;
+            _currentThreshold = 0;
+        }
+
         public void Update(float deltaTime)
         {
+            if (_currentThreshold < MAX_THRESHOLDS)
+            {
+                _elapsedTime += deltaTime;
+                if (_elapsedTime >= TIME_BETWEEN_ACCELERATIONS)
+                {
+                    _currentThreshold = Math.Min(_currentThreshold + 1, MAX_THRESHOLDS);
+                    _elapsedTime -= TIME_BETWEEN_ACCELERATIONS;
+                    Debug.WriteLine($"New threshold: {_currentThreshold}");
+                }
+            }
             // TODO: open/close corridors
         }
 

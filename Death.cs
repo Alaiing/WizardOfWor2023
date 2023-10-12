@@ -16,10 +16,12 @@ namespace WizardOfWor
         private SpriteSheet _spriteSheet;
         private int _positionX;
         private int _positionY;
+        private float _orientation;
+        private Vector2 _scale;
         private float _currentFrame;
         private Color _color;
 
-        public Death(SpriteSheet spriteSheet, int x, int y, Color color)
+        public Death(SpriteSheet spriteSheet, int x, int y, Color color, float orientation, Vector2 scale)
         {
             _spriteSheet = spriteSheet;
             _positionX = x;
@@ -27,6 +29,8 @@ namespace WizardOfWor
             _currentFrame = 0;
             _color = color;
             _enabled = true;
+            _scale = scale;
+            _orientation = orientation;
         }
 
         public void Update(float deltaTime)
@@ -40,7 +44,7 @@ namespace WizardOfWor
 
         public void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
         {
-            _spriteSheet.DrawFrame((int)MathF.Floor(_currentFrame), spriteBatch, new Vector2(_positionX + displayOffsetX, _positionY + displayOffsetY), 0, Vector2.One, _color);
+            _spriteSheet.DrawFrame((int)MathF.Floor(_currentFrame), spriteBatch, new Vector2(_positionX + displayOffsetX, _positionY + displayOffsetY), _orientation, _scale, _color);
         }
     }
 }

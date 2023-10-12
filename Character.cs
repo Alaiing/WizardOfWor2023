@@ -10,6 +10,7 @@ namespace WizardOfWor
     public class Character
     {
         private bool _enabled = true;
+        public bool Visible { get; set; }
         public bool IsAlive => _enabled;
         private readonly SpriteSheet _spriteSheet;
         public SpriteSheet SpriteSheet => _spriteSheet;
@@ -25,7 +26,9 @@ namespace WizardOfWor
         private Vector2 _moveDirection;
         public Vector2 MoveDirection => _moveDirection;
         private float _currentRotation;
+        public float CurrentRotation => _currentRotation;
         private Vector2 _currentScale;
+        public Vector2 CurrentScale => _currentScale;
         private float _speed;
         private float _moveStep;
         private float _animationSpeed;
@@ -41,6 +44,7 @@ namespace WizardOfWor
             _color = Color.White;
             CanChangeDirection = true;
             LookTo(new Vector2(1, 0));
+            Visible = true;
         }
 
         public void SetColor(Color color)
@@ -56,6 +60,14 @@ namespace WizardOfWor
         public void SetAnimationSpeed(float animationSpeed)
         {
             _animationSpeed = animationSpeed;
+        }
+
+        public void SetFrame(int frameIndex)
+        {
+            if (frameIndex > 0 && frameIndex < _spriteSheet.FrameCount)
+            {
+                _currentFrame = frameIndex;
+            }
         }
 
         public void MoveTo(Vector2 position)
@@ -115,7 +127,10 @@ namespace WizardOfWor
 
         public void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
         {
-            _spriteSheet.DrawFrame((int)MathF.Floor(_currentFrame), spriteBatch, new Vector2(PixelPositionX + displayOffsetX, PixelPositionY + displayOffsetY), _currentRotation, _currentScale, _color);
+            if(Visible)
+            {
+                _spriteSheet.DrawFrame((int)MathF.Floor(_currentFrame), spriteBatch, new Vector2(PixelPositionX + displayOffsetX, PixelPositionY + displayOffsetY), _currentRotation, _currentScale, _color);
+            }
         }
     }
 }

@@ -25,11 +25,23 @@
 /processorParam:TextureFormat=Color
 /build:burwor.png
 
+#begin C-long-bouche.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:C-long-bouche.wav
+
 #begin C-long.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:C-long.wav
+
+#begin death-bouche.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:death-bouche.wav
 
 #begin death.wav
 /importer:WavImporter
@@ -37,11 +49,23 @@
 /processorParam:Quality=Best
 /build:death.wav
 
+#begin G#-long-bouche.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:G#-long-bouche.wav
+
 #begin G#-long.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:G#-long.wav
+
+#begin intro-bouche.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:intro-bouche.wav
 
 #begin intro.wav
 /importer:WavImporter
@@ -61,11 +85,29 @@
 /processorParam:TextureFormat=Color
 /build:monster-death.png
 
+#begin piou-bouche.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:piou-bouche.wav
+
 #begin piou.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:piou.wav
+
+#begin player-death.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:player-death.png
 
 #begin player.png
 /importer:TextureImporter

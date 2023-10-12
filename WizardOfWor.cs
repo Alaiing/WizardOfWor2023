@@ -43,7 +43,8 @@ namespace WizardOfWor
         private SpriteSheet _thorworSheet;
 
         private List<Death> _deaths = new();
-        private SpriteSheet _deathSheet;
+        private SpriteSheet _enemyDeathSheet;
+        private SpriteSheet _playerDeathSheet;
 
         private readonly List<Bullet> _bullets = new();
 
@@ -89,13 +90,14 @@ namespace WizardOfWor
             _playerSheet = new SpriteSheet(Content, "player", 8, 8, 4, 4);
             _burworSheet = new SpriteSheet(Content, "burwor", 8, 8, 4, 4);
             _thorworSheet = new SpriteSheet(Content, "thorwor", 8, 8, 4, 4);
-            _deathSheet = new SpriteSheet(Content, "monster-death", 8, 8, 4, 4);
+            _enemyDeathSheet = new SpriteSheet(Content, "monster-death", 8, 8, 4, 4);
+            _playerDeathSheet = new SpriteSheet(Content, "player-death", 8, 8, 4, 4);
 
             _level = new Level("Level1.txt", 12, 10, GraphicsDevice, _spriteBatch);
 
-            _playerShootSound = Content.Load<SoundEffect>("piou");
-            _levelIntroSound = Content.Load<SoundEffect>("intro");
-            _playerDeathSound = Content.Load<SoundEffect>("death");
+            _playerShootSound = Content.Load<SoundEffect>("piou-bouche");
+            _levelIntroSound = Content.Load<SoundEffect>("intro-bouche");
+            _playerDeathSound = Content.Load<SoundEffect>("death-bouche");
 
             LoadMusicSounds();
         }
@@ -137,6 +139,7 @@ namespace WizardOfWor
         {
             _currentLevel++;
             ClearLevel();
+            StopMusic();
             InitLevel();
         }
 
@@ -144,13 +147,13 @@ namespace WizardOfWor
         {
             ClearLevel();
             _gameStarted = false;
-            _player = null;
             _currentLevel = 0;
             StopMusic();
         }
 
         private void ClearLevel()
         {
+            _level.Reset();
             _enemies.Clear();
             _bullets.Clear();
             Enemy.KillEnemyBullet();
@@ -171,13 +174,20 @@ namespace WizardOfWor
                 }
             }
 
-            _level.Update(deltaTime);
-
             SimpleControls.GetStates();
 
             if (_gameStarted)
             {
+                _level.Update(deltaTime);
 
+                if (_toCageTimer > 0)
+                {
+                    _toCageTimer -= deltaTime;
+                    if (_toCageTimer <= 0)
+                    {
+                        ToCage();
+                    }
+                }
 
                 if (SimpleControls.IsEscapeDown())
                     Exit();
@@ -185,15 +195,18 @@ namespace WizardOfWor
 
                 if (_inCage)
                 {
-                    if (SimpleControls.IsAnyMoveKeyDown())
+                    _inCageTimer += deltaTime;
+                    if (SimpleControls.IsAnyMoveKeyDown() || _inCageTimer >= 10f)
                     {
-                        _inCage = false;
-                        _player.MoveTo(_level.GetCellPosition(11, 6));
+                        LeaveCage();
                     }
                 }
                 else
                 {
-                    ProcessPlayerInput(deltaTime);
+                    if (_player.Visible)
+                    {
+                        ProcessPlayerInput(deltaTime);
+                    }
                 }
 
                 UpdateEnemies(deltaTime);
@@ -214,6 +227,12 @@ namespace WizardOfWor
                 }
             }
             base.Update(gameTime);
+        }
+
+        private void LeaveCage()
+        {
+            _inCage = false;
+            _player.MoveTo(_level.GetCellPosition(11, 6));
         }
 
         private void UpdateDeaths(float deltaTime)
@@ -281,7 +300,7 @@ namespace WizardOfWor
                             _enemies.Remove(enemy);
                             bullet.Origin.KillBullet();
 
-                            _deaths.Add(new Death(_deathSheet, enemy.PixelPositionX, enemy.PixelPositionY, enemy.Color));
+                            _deaths.Add(new Death(_enemyDeathSheet, enemy.PixelPositionX, enemy.PixelPositionY, enemy.Color, 0, Vector2.One));
 
                             _killCount++;
                             UpdateEnemiesSpawn();
@@ -294,13 +313,16 @@ namespace WizardOfWor
                 {
                     // TODO: test both players
 
-                    distanceX = (int)MathF.Abs(_player.PixelPositionX - bullet.PixelPositionX + _player.SpriteSheet.SpritePivot.X);
-                    distanceY = (int)MathF.Abs(_player.PixelPositionY - bullet.PixelPositionY + _player.SpriteSheet.SpritePivot.Y);
-
-                    if (distanceX <= _player.SpriteSheet.SpritePivot.X && distanceY <= _player.SpriteSheet.SpritePivot.Y)
+                    if (_player.Visible)
                     {
-                        KillPlayer(_player);
-                        bullet.Origin.KillBullet();
+                        distanceX = (int)MathF.Abs(_player.PixelPositionX - bullet.PixelPositionX + _player.SpriteSheet.SpritePivot.X);
+                        distanceY = (int)MathF.Abs(_player.PixelPositionY - bullet.PixelPositionY + _player.SpriteSheet.SpritePivot.Y);
+
+                        if (distanceX <= _player.SpriteSheet.SpritePivot.X && distanceY <= _player.SpriteSheet.SpritePivot.Y)
+                        {
+                            KillPlayer(_player);
+                            bullet.Origin.KillBullet();
+                        }
                     }
                 }
             }
@@ -401,13 +423,16 @@ namespace WizardOfWor
 
         private void CheckPlayerDeath()
         {
-            foreach (Character enemy in _enemies)
+            if (_player.Visible)
             {
-                int distanceX = (int)MathF.Abs(enemy.PixelPositionX - _player.PixelPositionX);
-                int distanceY = (int)MathF.Abs(enemy.PixelPositionY - _player.PixelPositionY);
-                if (distanceX <= 2 && distanceY <= 2)
+                foreach (Character enemy in _enemies)
                 {
-                    KillPlayer(_player);
+                    int distanceX = (int)MathF.Abs(enemy.PixelPositionX - _player.PixelPositionX);
+                    int distanceY = (int)MathF.Abs(enemy.PixelPositionY - _player.PixelPositionY);
+                    if (distanceX <= 2 && distanceY <= 2)
+                    {
+                        KillPlayer(_player);
+                    }
                 }
             }
         }
@@ -422,28 +447,46 @@ namespace WizardOfWor
             if (_player.HasLivesLeft())
             {
                 _player.LoseLife();
-                ToCage();
+                _deaths.Add(new Death(_playerDeathSheet, player.PixelPositionX, player.PixelPositionY, Color.White, _player.CurrentRotation, _player.CurrentScale));
+
+                _playerDeathSound.Play();
+                ToCage((float)_playerDeathSound.Duration.TotalSeconds);
             }
             else
             {
                 EndGame();
             }
 
-            _playerDeathSound.Play();
+        }
+
+        private float _toCageTimer;
+        private float _inCageTimer;
+        private void ToCage(float timer)
+        {
+            _toCageTimer = timer;
+            _player.Visible = false;
         }
 
         private void ToCage()
         {
             _player.MoveTo(_level.GetCellPosition(11, 7));
             _player.LookTo(new Vector2(-1, 0));
+            _player.SetFrame(1);
+            _player.Visible = true;
             _inCage = true;
+            _inCageTimer = 0;
         }
 
         private void DrawRemainingLives(SpriteBatch spriteBatch)
         {
             int offset = _inCage ? 1 : 0;
+            int remainingLives = _player.RemainingLives;
+            if (_toCageTimer > 0)
+            {
+                remainingLives++;
+            }
             Vector2 startPosition = _level.GetCellPosition(11, 7);
-            for (int i = 0; i < MathF.Min(2 + 1 - offset, _player.RemainingLives); i++)
+            for (int i = 0; i < MathF.Min(2 + 1 - offset, remainingLives); i++)
             {
                 _playerSheet.DrawFrame(1, spriteBatch, startPosition + new Vector2(-1, 0) * (i + offset) * 16 + new Vector2(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y), 0, new Vector2(-1, 1), _player.Color);
             }
@@ -471,6 +514,7 @@ namespace WizardOfWor
         {
             foreach (Enemy enemy in _enemies)
             {
+                enemy.SetThresholdSpeed(_level.CurrentThreshold);
                 Vector2 newMoveDirection = PickPossibleDirection(enemy);
                 enemy.LookTo(newMoveDirection);
 
@@ -478,7 +522,7 @@ namespace WizardOfWor
                 enemy.Animate(deltaTime);
 
                 // Test for player in line of sight
-                if (!Enemy.IsAnyEnemyFiring() && !_inCage
+                if (_player.Visible && !Enemy.IsAnyEnemyFiring() && !_inCage
                     && (enemy.MoveDirection.X != 0 && enemy.PixelPositionY == _player.PixelPositionY && MathF.Sign(enemy.MoveDirection.X) == MathF.Sign(_player.PixelPositionX - enemy.PixelPositionX)
                     || enemy.MoveDirection.Y != 0 && enemy.PixelPositionX == _player.PixelPositionX && MathF.Sign(enemy.MoveDirection.Y) == MathF.Sign(_player.PixelPositionY - enemy.PixelPositionY)))
                 {
@@ -584,37 +628,52 @@ namespace WizardOfWor
         private float _currentTempoBPS;
         private float _currentMusiqueTime;
         private SoundEffect[] _musicNoteSounds;
+        private SoundEffectInstance[] _musicNotesInstances;
         private int _currentMusicNote;
 
         private void LoadMusicSounds()
         {
             _musicNoteSounds = new SoundEffect[2];
-            _musicNoteSounds[0] = Content.Load<SoundEffect>("C-long");
-            _musicNoteSounds[1] = Content.Load<SoundEffect>("G#-long");
+            _musicNoteSounds[0] = Content.Load<SoundEffect>("C-long-bouche");
+            _musicNoteSounds[1] = Content.Load<SoundEffect>("G#-long-bouche");
+            _musicNotesInstances = new SoundEffectInstance[2];
+            _musicNotesInstances[0] = _musicNoteSounds[0].CreateInstance();
+            _musicNotesInstances[1] = _musicNoteSounds[1].CreateInstance();
+        }
+
+        private void SetTempo(float tempo)
+        {
+            _currentTempoBPS = tempo / 60;
         }
 
         private void StartMusic(float tempo)
         {
-            _currentTempoBPS = tempo / 60;
+            SetTempo(tempo);
             _currentMusiqueTime = 0;
             _currentMusicNote = 0;
-            _musicNoteSounds[_currentMusicNote].Play();
+            _musicNotesInstances[_currentMusicNote].Play();
             _isMusicPlaying = true;
         }
 
         private void StopMusic()
         {
             _isMusicPlaying = false;
+            _musicNotesInstances[_currentMusicNote].Stop();
         }
 
         private void UpdateMusic(float deltaTime)
         {
-            _currentMusiqueTime += deltaTime;
-            if (_currentMusiqueTime > 1 / _currentTempoBPS)
+            if (_isMusicPlaying)
             {
-                _currentMusicNote = 1 - _currentMusicNote;
-                _musicNoteSounds[_currentMusicNote].Play();
-                _currentMusiqueTime = _currentMusiqueTime - 1f / _currentTempoBPS ;
+                SetTempo(30 * (_level.CurrentThreshold + 1));
+                _currentMusiqueTime += deltaTime;
+                if (_currentMusiqueTime > 1 / _currentTempoBPS)
+                {
+                    _musicNotesInstances[_currentMusicNote].Stop();
+                    _currentMusicNote = 1 - _currentMusicNote;
+                    _musicNotesInstances[_currentMusicNote].Play();
+                    _currentMusiqueTime = _currentMusiqueTime - 1f / _currentTempoBPS;
+                }
             }
         }
         #endregion
