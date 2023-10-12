@@ -37,7 +37,14 @@ namespace WizardOfWor
         public int PixelWidth => _width * _cellWidth;
         public int PixelHeight => _height * _cellHeight;
 
-        public Level(string asset, int cellWidth, int cellHeight)
+        private RenderTarget2D _renderTarget;
+        private Color[] _renderData;
+        public RenderTarget2D RenderTarget2D => _renderTarget;
+
+        private GraphicsDevice _graphicsDevice;
+        private SpriteBatch _spriteBatch;
+
+        public Level(string asset, int cellWidth, int cellHeight, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
             string[] lines = System.IO.File.ReadAllLines(asset);
             _height = lines.Length;
@@ -55,7 +62,16 @@ namespace WizardOfWor
             _cellWidth = cellWidth;
             _cellHeight = cellHeight;
 
-            Color = new Color(0.286f, 0.318f, 0.820f, 1);
+            _spriteBatch = spriteBatch;
+            _graphicsDevice = graphicsDevice;
+
+            _renderTarget = new RenderTarget2D(_graphicsDevice, PixelWidth, PixelHeight);
+            Draw();
+        }
+
+        public void Update(float deltaTime)
+        {
+            // TODO: open/close corridors
         }
 
         public Vector2 GetCellPosition(int x, int y)
@@ -139,33 +155,46 @@ namespace WizardOfWor
 
             return canMove;
         }
-        public void Draw(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, RenderTarget2D renderTarget)
+
+        private void Draw()
         {
-            graphicsDevice.SetRenderTarget(renderTarget);
-            graphicsDevice.Clear(new Color(0,0,0,0));
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _graphicsDevice.SetRenderTarget(_renderTarget);
+            _graphicsDevice.Clear(new Color(0,0,0,0));
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             for (int x = 0; x < _width; x++)
             {
                 for (int y = 0; y < _height; y++)
                 {
                     if (x < _width - 1)
                     {
-                        spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight + 8, 4, 2), Color.White);
+                        _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight + 8, 4, 2), Color.White);
                     }
 
                     if ((_grid[x, y] & CANT_MOVE_RIGHT) > 0)
                     {
-                        spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight, 4, 8), Color.White);
+                        _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight, 4, 8), Color.White);
                     }
 
                     if ((_grid[x, y] & CANT_MOVE_DOWN) > 0)
                     {
-                        spriteBatch.FillRectangle(new Rectangle(x * _cellWidth, y * _cellHeight + 8, 8, 2), Color.White);
+                        _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth, y * _cellHeight + 8, 8, 2), Color.White);
                     }
                 }
             }
-            spriteBatch.End();
-            graphicsDevice.SetRenderTarget(null);
+            _spriteBatch.End();
+            _graphicsDevice.SetRenderTarget(null);
+
+            if (_renderData == null) 
+            {
+                _renderData = new Color[PixelWidth * PixelHeight];
+            }
+            _renderTarget.GetData(_renderData);
+        }
+
+        public bool HasPixel(int x, int y)
+        {
+            int renderIndex = x + y * PixelWidth;
+            return renderIndex < 0 || renderIndex >= _renderData.Length || _renderData[renderIndex].A > 0;
         }
     }
 }

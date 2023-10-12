@@ -25,14 +25,14 @@ namespace WizardOfWor
         private readonly Color GARWOR_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
         private readonly Color THORWAR_COLOR = new Color(0.694f, 0.157f, 0.153f, 1f);
 
+        private readonly Color LEVEL_DEFAULT_COLOR = new Color(0.286f, 0.318f, 0.820f, 1);
+
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
         private RenderTarget2D _renderTarget;
 
         private Level _level;
-        private RenderTarget2D _levelRender;
-        private Color[] _levelRenderData;
 
         private Player _player;
         private SpriteSheet _playerSheet;
@@ -46,8 +46,6 @@ namespace WizardOfWor
         private SpriteSheet _deathSheet;
 
         private readonly List<Bullet> _bullets = new();
-        private Bullet _playerBullet;
-        private Bullet _enemyBullet;
 
         private Random _random;
 
@@ -88,17 +86,12 @@ namespace WizardOfWor
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
             _playerSheet = new SpriteSheet(Content, "player", 8, 8, 4, 4);
             _burworSheet = new SpriteSheet(Content, "burwor", 8, 8, 4, 4);
             _thorworSheet = new SpriteSheet(Content, "thorwor", 8, 8, 4, 4);
             _deathSheet = new SpriteSheet(Content, "monster-death", 8, 8, 4, 4);
 
-            _level = new Level("Level1.txt", 12, 10);
-            _levelRender = new RenderTarget2D(GraphicsDevice, _level.PixelWidth, _level.PixelHeight);
-            _level.Draw(GraphicsDevice, _spriteBatch, _levelRender);
-            _levelRenderData = new Color[_level.PixelWidth * _level.PixelHeight];
-            _levelRender.GetData(_levelRenderData);
+            _level = new Level("Level1.txt", 12, 10, GraphicsDevice, _spriteBatch);
 
             _playerShootSound = Content.Load<SoundEffect>("piou");
             _levelIntroSound = Content.Load<SoundEffect>("intro");
@@ -160,8 +153,8 @@ namespace WizardOfWor
         {
             _enemies.Clear();
             _bullets.Clear();
-            _enemyBullet = null;
-            _playerBullet = null;
+            Enemy.KillEnemyBullet();
+            _player.KillBullet();
         }
 
         protected override void Update(GameTime gameTime)
@@ -177,6 +170,8 @@ namespace WizardOfWor
                     StartLevel();
                 }
             }
+
+            _level.Update(deltaTime);
 
             SimpleControls.GetStates();
 
@@ -251,14 +246,13 @@ namespace WizardOfWor
                 bullet.Update(deltaTime);
 
                 // Test whether the bullet hits a wall (non empty pixel)
-                int renderIndex = bullet.PixelPositionX + bullet.PixelPositionY * _level.PixelWidth;
-                if (renderIndex < 0 || renderIndex >= _levelRenderData.Length || _levelRenderData[renderIndex].A > 0)
+                if (_level.HasPixel(bullet.PixelPositionX, bullet.PixelPositionY))
                 {
                     if (_player.IsOwnedBullet(bullet))
                     {
                         _player.KillBullet();
                     }
-                    else if (_enemyBullet == bullet)
+                    else if (Enemy.IsAnyEnemyFiring())
                     {
                         Enemy.KillEnemyBullet();
                     }
@@ -319,7 +313,7 @@ namespace WizardOfWor
             GraphicsDevice.Clear(Color.Black);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            _spriteBatch.Draw(_levelRender, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _levelRender.Width, _levelRender.Height), _level.Color);
+            _spriteBatch.Draw(_level.RenderTarget2D, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _level.PixelWidth, _level.PixelHeight), LEVEL_DEFAULT_COLOR);
 
             if (_gameStarted)
             {
@@ -393,7 +387,7 @@ namespace WizardOfWor
 
             if (SimpleControls.IsADown() && !_player.IsFiring())
             {
-                _playerBullet = _player.Fire(Bullet.TargetTypes.Any);
+                _player.Fire(Bullet.TargetTypes.Any);
 
             }
 
@@ -488,7 +482,7 @@ namespace WizardOfWor
                     && (enemy.MoveDirection.X != 0 && enemy.PixelPositionY == _player.PixelPositionY && MathF.Sign(enemy.MoveDirection.X) == MathF.Sign(_player.PixelPositionX - enemy.PixelPositionX)
                     || enemy.MoveDirection.Y != 0 && enemy.PixelPositionX == _player.PixelPositionX && MathF.Sign(enemy.MoveDirection.Y) == MathF.Sign(_player.PixelPositionY - enemy.PixelPositionY)))
                 {
-                    _enemyBullet = enemy.Fire();
+                    enemy.Fire();
                 }
             }
         }
