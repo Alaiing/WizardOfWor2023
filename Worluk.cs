@@ -1,0 +1,38 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace WizardOfWor
+{
+    public class Worluk : Enemy
+    {
+        public Worluk(SpriteSheet spriteSheet, Color color, int preferredDirection) : base(spriteSheet, color, false)
+        {
+            SetSpeed(SPEED_5);
+            SetAnimationSpeed(20);
+            _preferredHorizontalDirection = 1;
+        }
+
+        public override bool CanFireAtPlayer(Player player)
+        {
+            return false;
+        }
+
+        public override void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
+        {
+            _currentScale = Vector2.One;
+            _currentRotation = 0;
+            base.Draw(spriteBatch, displayOffsetX, displayOffsetY);
+        }
+
+        public override void SetThresholdSpeed(int threshold)
+        {
+            // DO NOTHING
+        }
+    }
+}

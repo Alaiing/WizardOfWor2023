@@ -10,7 +10,7 @@ namespace WizardOfWor
     public class Character
     {
         private bool _enabled = true;
-        public bool Visible { get; set; }
+        public virtual bool Visible { get; set; }
         public bool IsAlive => _enabled;
         private readonly SpriteSheet _spriteSheet;
         public SpriteSheet SpriteSheet => _spriteSheet;
@@ -25,9 +25,9 @@ namespace WizardOfWor
         private Vector2 _orientation;
         private Vector2 _moveDirection;
         public Vector2 MoveDirection => _moveDirection;
-        private float _currentRotation;
+        protected float _currentRotation;
         public float CurrentRotation => _currentRotation;
-        private Vector2 _currentScale;
+        protected Vector2 _currentScale;
         public Vector2 CurrentScale => _currentScale;
         private float _speed;
         private float _moveStep;
@@ -125,7 +125,7 @@ namespace WizardOfWor
             _enabled = false;
         }
 
-        public void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
+        public virtual void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
         {
             if(Visible)
             {

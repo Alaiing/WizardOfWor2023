@@ -18,7 +18,12 @@ namespace WizardOfWor
         public const int CANT_MOVE_RIGHT = 1;
         public const int CANT_MOVE_DOWN = 2;
         public const float TIME_BETWEEN_ACCELERATIONS = 10;
-        public const int MAX_THRESHOLDS = 3;
+        public const int MAX_THRESHOLDS = 4;
+        private const float TUNNEL_COOLDOWN = 2f;
+
+        public const int NO_TUNNEL = 0;
+        public const int TUNNEL_LEFT = 1;
+        public const int TUNNEL_RIGHT = 2;
 
         public struct CanMoveData
         {
@@ -37,7 +42,8 @@ namespace WizardOfWor
         public Color Color { get; private set; }
 
         public int PixelWidth => _width * _cellWidth;
-        public int PixelHeight => _height * _cellHeight;
+        public int PixelHeight => _height * _cellHeight + RadarHeight;
+        public int RadarHeight => (_height + 1) * 2;
 
         private RenderTarget2D _renderTarget;
         private Color[] _renderData;
@@ -49,6 +55,12 @@ namespace WizardOfWor
         private float _elapsedTime;
         private int _currentThreshold;
         public int CurrentThreshold => _currentThreshold;
+
+        private float _tunnelTimer;
+        public bool TunnelsOpen { get; private set; }
+        private int _tunnelY = 3;
+        private int _tunnelLeftX = 1;
+        private int _tunnelRightX = 11;
 
         public Level(string asset, int cellWidth, int cellHeight, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
         {
@@ -79,6 +91,8 @@ namespace WizardOfWor
         {
             _elapsedTime = 0;
             _currentThreshold = 0;
+            _tunnelTimer = 0;
+            TunnelsOpen = true;
         }
 
         public void Update(float deltaTime)
@@ -90,10 +104,15 @@ namespace WizardOfWor
                 {
                     _currentThreshold = Math.Min(_currentThreshold + 1, MAX_THRESHOLDS);
                     _elapsedTime -= TIME_BETWEEN_ACCELERATIONS;
-                    Debug.WriteLine($"New threshold: {_currentThreshold}");
                 }
             }
-            // TODO: open/close corridors
+
+            _tunnelTimer += deltaTime;
+            if (_tunnelTimer > TUNNEL_COOLDOWN)
+            {
+                TunnelsOpen = !TunnelsOpen;
+                _tunnelTimer -= TUNNEL_COOLDOWN;
+            }
         }
 
         public Vector2 GetCellPosition(int x, int y)
@@ -109,9 +128,23 @@ namespace WizardOfWor
             return deltaX == 0 && deltaY == 0;
         }
 
-        public CanMoveData CanMove(int positionX, int positionY)
+        public Vector2 GetTunnelPosition(int tunnel)
+        {
+            Vector2 newPosition = new Vector2();
+            newPosition.Y = _tunnelY * _cellHeight;
+            if (tunnel == TUNNEL_LEFT)
+                newPosition.X = _tunnelLeftX * _cellWidth;
+            else if (tunnel == TUNNEL_RIGHT)
+                newPosition.X = _tunnelRightX * _cellWidth;
+
+            return newPosition;
+        }
+
+        public CanMoveData CanMove(int positionX, int positionY, out int tunnelTeleport)
         {
             CanMoveData canMove = new CanMoveData();
+
+            tunnelTeleport = NO_TUNNEL;
 
             int closestGridCellX = positionX / _cellWidth;
             int deltaX = positionX % _cellWidth;
@@ -172,6 +205,18 @@ namespace WizardOfWor
                     {
                         canMove.Up = (_grid[closestGridCellX, closestGridCellY - 1] & CANT_MOVE_DOWN) == 0;
                     }
+
+                    if (TunnelsOpen && closestGridCellY == _tunnelY)
+                    {
+                        if (closestGridCellX == _tunnelLeftX)
+                        {
+                            tunnelTeleport = TUNNEL_LEFT;
+                        }
+                        else if (closestGridCellX == _tunnelRightX)
+                        {
+                            tunnelTeleport = TUNNEL_RIGHT;
+                        }
+                    }
                 }
             }
 
@@ -181,7 +226,7 @@ namespace WizardOfWor
         private void Draw()
         {
             _graphicsDevice.SetRenderTarget(_renderTarget);
-            _graphicsDevice.Clear(new Color(0,0,0,0));
+            _graphicsDevice.Clear(new Color(0, 0, 0, 0));
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             for (int x = 0; x < _width; x++)
             {
@@ -192,25 +237,60 @@ namespace WizardOfWor
                         _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight + 8, 4, 2), Color.White);
                     }
 
-                    if ((_grid[x, y] & CANT_MOVE_RIGHT) > 0)
-                    {
-                        _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight, 4, 8), Color.White);
-                    }
-
                     if ((_grid[x, y] & CANT_MOVE_DOWN) > 0)
                     {
                         _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth, y * _cellHeight + 8, 8, 2), Color.White);
                     }
+
+                    if (y == _tunnelY && (x == _tunnelLeftX - 1 || x == _tunnelRightX))
+                        continue;
+
+                    if ((_grid[x, y] & CANT_MOVE_RIGHT) > 0)
+                    {
+                        DrawVerticalWall(x, y, Color.White);
+                    }
                 }
             }
+            _spriteBatch.FillRectangle(new Rectangle(52, 78, 4, 16), Color.White);
+            _spriteBatch.FillRectangle(new Rectangle(52 + 12 * 4, 78, 4, 16), Color.White);
+            _spriteBatch.FillRectangle(new Rectangle(54, 78, 12 * 4, 2), Color.White);
+            _spriteBatch.FillRectangle(new Rectangle(54, 78 + 7 * 2, 12 * 4, 2), Color.White);
+
             _spriteBatch.End();
             _graphicsDevice.SetRenderTarget(null);
 
-            if (_renderData == null) 
+            if (_renderData == null)
             {
                 _renderData = new Color[PixelWidth * PixelHeight];
             }
             _renderTarget.GetData(_renderData);
+        }
+
+        public void DrawTunnels(Color color, int offsetX, int offsetY)
+        {
+            if (!TunnelsOpen)
+            {
+                DrawVerticalWall(_tunnelLeftX - 1, _tunnelY, color, offsetX, offsetY);
+                DrawVerticalWall(_tunnelRightX, _tunnelY, color, offsetX, offsetY);
+            }
+        }
+
+        private void DrawVerticalWall(int x, int y, Color color, int offsetX = 0, int offsetY = 0)
+        {
+            _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8 + offsetX, y * _cellHeight + offsetY, 4, 8), color);
+        }
+
+        public void DrawRadar(List<Enemy> enemies)
+        {
+            foreach (Enemy enemy in enemies)
+            {
+                int closestGridCellX = enemy.PixelPositionX / _cellWidth;
+                int closestGridCellY = enemy.PixelPositionY / _cellHeight + 1;
+
+                Color color = enemy.Color;
+                color.A = 128;
+                _spriteBatch.FillRectangle(new Rectangle(56 + closestGridCellX * 4, 80 + closestGridCellY * 2, 4, 2), color);
+            }
         }
 
         public bool HasPixel(int x, int y)
