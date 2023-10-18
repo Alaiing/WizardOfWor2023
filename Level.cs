@@ -62,7 +62,9 @@ namespace WizardOfWor
         private int _tunnelLeftX = 1;
         private int _tunnelRightX = 11;
 
-        public Level(string asset, int cellWidth, int cellHeight, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        private Random _random;
+
+        public Level(string asset, int cellWidth, int cellHeight, GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, Random random)
         {
             string[] lines = System.IO.File.ReadAllLines(asset);
             _height = lines.Length;
@@ -85,6 +87,7 @@ namespace WizardOfWor
 
             _renderTarget = new RenderTarget2D(_graphicsDevice, PixelWidth, PixelHeight);
             Draw();
+            _random = random;
         }
 
         public void Reset()
@@ -126,6 +129,13 @@ namespace WizardOfWor
             int deltaY = positionY % _cellHeight;
 
             return deltaX == 0 && deltaY == 0;
+        }
+
+        public Vector2 GetRandomPosition()
+        {
+            int gridX = 1 + _random.Next(11);
+            int gridY = 1 + _random.Next(6);
+            return GetCellPosition(gridX, gridY);
         }
 
         public Vector2 GetTunnelPosition(int tunnel)
@@ -223,6 +233,89 @@ namespace WizardOfWor
             return canMove;
         }
 
+        public Vector2 PickPossibleDirection(Enemy character, out int tunnel)
+        {
+            tunnel = NO_TUNNEL;
+            if (IsOnGridCell(character.PixelPositionX, character.PixelPositionY))
+            {
+                if (character is Wizard)
+                {
+                    Debug.WriteLine($"Debug wizard : {character.PixelPositionX}, {character.PixelPositionX}");
+                }
+                if (character.CanChangeDirection)
+                {
+                    CanMoveData canMove = CanMove(character.PixelPositionX, character.PixelPositionY, out tunnel);
+
+                    List<Vector2> possibleDirections = new();
+                    if (character.MoveDirection.X > 0 || character.MoveDirection.X < 0)
+                    {
+                        if (character.MoveDirection.X > 0 && (canMove.Right || tunnel == TUNNEL_RIGHT)
+                            || character.MoveDirection.X < 0 && (canMove.Left || tunnel == TUNNEL_LEFT))
+                        {
+                            if (character.PreferredHorizontalDirection != 0)
+                            {
+                                character.CanChangeDirection = false;
+                                return character.MoveDirection;
+                            }
+                            else
+                            {
+                                possibleDirections.Add(character.MoveDirection);
+                            }
+                        }
+
+                        if (canMove.Up)
+                            possibleDirections.Add(new Vector2(0, -1));
+                        if (canMove.Down)
+                            possibleDirections.Add(new Vector2(0, 1));
+
+                        if (possibleDirections.Count == 0)
+                            possibleDirections.Add(-character.MoveDirection);
+                    }
+
+                    if (character.MoveDirection.Y > 0 || character.MoveDirection.Y < 0)
+                    {
+                        if (character.MoveDirection.Y > 0 && canMove.Down || character.MoveDirection.Y < 0 && canMove.Up)
+                        {
+                            possibleDirections.Add(character.MoveDirection);
+                        }
+
+                        if (canMove.Right || tunnel == TUNNEL_RIGHT)
+                        {
+                            if (character.PreferredHorizontalDirection > 0)
+                            {
+                                character.CanChangeDirection = false;
+                                return new Vector2(1, 0);
+                            }
+                            possibleDirections.Add(new Vector2(1, 0));
+                        }
+                        if (canMove.Left || tunnel == TUNNEL_LEFT)
+                        {
+                            if (character.PreferredHorizontalDirection < 0)
+                            {
+                                character.CanChangeDirection = false;
+                                return new Vector2(-1, 0);
+                            }
+                            possibleDirections.Add(new Vector2(-1, 0));
+                        }
+
+                        if (possibleDirections.Count == 0)
+                            possibleDirections.Add(-character.MoveDirection);
+                    }
+
+                    Vector2 chosenDirection = possibleDirections[_random.Next(0, possibleDirections.Count)];
+                    character.CanChangeDirection = false;
+
+                    return chosenDirection;
+                }
+            }
+            else
+            {
+                character.CanChangeDirection = true;
+            }
+
+            return character.MoveDirection;
+        }
+
         private void Draw()
         {
             _graphicsDevice.SetRenderTarget(_renderTarget);
@@ -232,7 +325,7 @@ namespace WizardOfWor
             {
                 for (int y = 0; y < _height; y++)
                 {
-                    if (x < _width - 1)
+                    if (x < _width - 1 && !(y == _height - 1 && x < _width - 3 && x > 1))
                     {
                         _spriteBatch.FillRectangle(new Rectangle(x * _cellWidth + 8, y * _cellHeight + 8, 4, 2), Color.White);
                     }
@@ -289,7 +382,7 @@ namespace WizardOfWor
 
                 Color color = enemy.Color;
                 color.A = 128;
-                _spriteBatch.FillRectangle(new Rectangle(56 + closestGridCellX * 4, 80 + closestGridCellY * 2, 4, 2), color);
+                _spriteBatch.FillRectangle(new Rectangle(56 + closestGridCellX * 4, 83 + closestGridCellY * 2, 4, 2), color);
             }
         }
 

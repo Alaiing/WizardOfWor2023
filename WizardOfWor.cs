@@ -13,47 +13,60 @@ namespace WizardOfWor
     public class WizardOfWor : Game
     {
         private const int SCREEN_WIDTH = 160;
-        private const int SCREEN_HEIGHT = 112;
+        private const int SCREEN_HEIGHT = 114;
         private const int SCREEN_SCALE = 8;
         private const int DISPLAY_OFFSET_X = 4;
-        private const int DISPLAY_OFFSET_Y = 4;
+        private const int DISPLAY_OFFSET_Y = 7;
 
         private const int PLAYER_MAX_LIVES = 2;
-        private const int BURWAR_AMOUNT = 6;
+        private const int BURWOR_AMOUNT = 6;
         private readonly Color PLAYER1_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
-        private readonly Color BURWAR_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
+        private readonly Color BURWOR_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
         private readonly Color GARWOR_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
-        private readonly Color THORWAR_COLOR = new Color(0.694f, 0.157f, 0.153f, 1f);
+        private readonly Color THORWOR_COLOR = new Color(0.694f, 0.157f, 0.153f, 1f);
 
         private readonly Color LEVEL_DEFAULT_COLOR = new Color(0.286f, 0.318f, 0.820f, 1);
+        private readonly Color LEVEL_DOUBLE_SCORE_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
+
+        private readonly int BURWOR_SCORE = 100;
+        private readonly int GARWOR_SCORE = 200;
+        private readonly int THORWOR_SCORE = 500;
+        private readonly int WORLUK_SCORE = 1000;
+        private readonly int WIZARD_SCORE = 1000;
+
 
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
         private RenderTarget2D _renderTarget;
 
-        private Level _level;
+        private Level _currentLevel;
+        private Level[] _levels;
 
         private Player _player;
         private SpriteSheet _playerSheet;
         private bool _inCage;
+        private int _scoreModifier;
+        private bool _applyDoubleScore;
 
         private List<Enemy> _enemies = new();
         private SpriteSheet _burworSheet;
         private SpriteSheet _thorworSheet;
         private SpriteSheet _worlukSheet;
+        private SpriteSheet _wizardSheet;
 
         private List<Death> _deaths = new();
         private SpriteSheet _enemyDeathSheet;
         private SpriteSheet _playerDeathSheet;
 
+        private SpriteSheet _numbersSheet;
+
         private readonly List<Bullet> _bullets = new();
 
         private Random _random;
 
-
         private bool _gameStarted = false;
-        private int _currentLevel = 0;
+        private int _currentStage = 0;
         private int _levelState;
         private int _garworToSpawn;
         private int _thorworToSpawn;
@@ -63,7 +76,6 @@ namespace WizardOfWor
         private SoundEffect _playerShootSound;
         private SoundEffect _levelIntroSound;
         private SoundEffect _playerDeathSound;
-        private SoundEffectInstance _currentPlayerShootSound;
 
         private MusicManager _musicManager;
 
@@ -85,6 +97,8 @@ namespace WizardOfWor
         protected override void Initialize()
         {
             _renderTarget = new RenderTarget2D(GraphicsDevice, SCREEN_WIDTH, SCREEN_HEIGHT);
+            _scoreModifier = 1;
+            _applyDoubleScore = false;
 
             base.Initialize();
         }
@@ -97,10 +111,17 @@ namespace WizardOfWor
             _burworSheet = new SpriteSheet(Content, "burwor", 8, 8, 4, 4);
             _thorworSheet = new SpriteSheet(Content, "thorwor", 8, 8, 4, 4);
             _worlukSheet = new SpriteSheet(Content, "worluk", 8, 8, 4, 4);
+            _wizardSheet = new SpriteSheet(Content, "wizardofwor", 8, 8, 4, 4);
+
             _enemyDeathSheet = new SpriteSheet(Content, "monster-death", 8, 8, 4, 4);
             _playerDeathSheet = new SpriteSheet(Content, "player-death", 8, 8, 4, 4);
 
-            _level = new Level("Level1.txt", 12, 10, GraphicsDevice, _spriteBatch);
+            _numbersSheet = new SpriteSheet(Content, "numbers", 14, 7, 0, 0);
+
+            _levels = new Level[2];
+            _levels[0] = new Level("Level1.txt", 12, 10, GraphicsDevice, _spriteBatch, _random);
+            _levels[1] = new Level("Level2.txt", 12, 10, GraphicsDevice, _spriteBatch, _random);
+            _currentLevel = _levels[0];
 
             _playerShootSound = Content.Load<SoundEffect>("piou-bouche");
             _levelIntroSound = Content.Load<SoundEffect>("intro-bouche");
@@ -114,7 +135,8 @@ namespace WizardOfWor
 
         private void InitLevel()
         {
-            _level.Reset();
+            _currentLevel = _levels[_currentStage % 2];
+            _currentLevel.Reset();
             if (_player == null)
             {
                 SpawnPlayer();
@@ -124,9 +146,13 @@ namespace WizardOfWor
                 _player.ResetLives();
             }
             ToCage();
-            _garworToSpawn = _thorworToSpawn = _currentLevel + 1;
+
+            _scoreModifier = _applyDoubleScore ? 2 : 1;
+            _applyDoubleScore = false;
+
+            _garworToSpawn = _thorworToSpawn = _currentStage + 1;
             _killCount = 0;
-            _enemiesToKill = BURWAR_AMOUNT + _garworToSpawn + _thorworToSpawn;
+            _enemiesToKill = BURWOR_AMOUNT + _garworToSpawn + _thorworToSpawn;
             _levelIntroSound.Play();
             _levelStartTimer = (float)_levelIntroSound.Duration.TotalSeconds;
             _levelStarting = true;
@@ -135,9 +161,9 @@ namespace WizardOfWor
 
         private void StartLevel()
         {
-            for (int i = 0; i < BURWAR_AMOUNT; i++)
+            for (int i = 0; i < BURWOR_AMOUNT; i++)
             {
-                SpawnEnemy(_burworSheet, BURWAR_COLOR, canBecomeInvisible: false);
+                SpawnEnemy(_burworSheet, BURWOR_COLOR, canBecomeInvisible: false, BURWOR_SCORE);
             }
 
             _levelStarting = false;
@@ -150,7 +176,7 @@ namespace WizardOfWor
             switch (_levelState)
             {
                 case 0:
-                    if (_currentLevel > 0)
+                    if (_currentStage > 0)
                     {
                         _levelState++;
                         SpawnWorluk();
@@ -161,9 +187,11 @@ namespace WizardOfWor
                     }
                     break;
                 case 1:
-                    // TODO spawn Wizard of Wor
-                    // _levelState++;
-                    NextLevel();
+                    _levelState++;
+                    if (_random.Next(2) == 0)
+                        SpawnWizard();
+                    else
+                        NextLevel();
                     break;
                 case 2:
                     NextLevel();
@@ -173,7 +201,7 @@ namespace WizardOfWor
 
         private void NextLevel()
         {
-            _currentLevel++;
+            _currentStage++;
             ClearLevel();
             _musicManager.StopMusic();
             InitLevel();
@@ -183,13 +211,15 @@ namespace WizardOfWor
         {
             ClearLevel();
             _gameStarted = false;
-            _currentLevel = 0;
+            _currentStage = 0;
+            _scoreModifier = 1;
+            _player.ResetScore();
             _musicManager.StopMusic();
         }
 
         private void ClearLevel()
         {
-            _level.Reset();
+            _currentLevel.Reset();
             _enemies.Clear();
             _bullets.Clear();
             Enemy.KillEnemyBullet();
@@ -214,7 +244,7 @@ namespace WizardOfWor
 
             if (_gameStarted)
             {
-                _level.Update(deltaTime);
+                _currentLevel.Update(deltaTime);
 
                 if (_toCageTimer > 0)
                 {
@@ -232,7 +262,7 @@ namespace WizardOfWor
                 if (_inCage)
                 {
                     _inCageTimer += deltaTime;
-                    if (SimpleControls.IsAnyMoveKeyDown() || _inCageTimer >= 10f)
+                    if ((SimpleControls.IsAnyMoveKeyDown() && !_levelStarting) || _inCageTimer >= 10f)
                     {
                         LeaveCage();
                     }
@@ -253,7 +283,7 @@ namespace WizardOfWor
 
                 UpdateDeaths(deltaTime);
 
-                _musicManager.Update(deltaTime, _level.CurrentThreshold);
+                _musicManager.Update(deltaTime, _currentLevel.CurrentThreshold);
             }
             else
             {
@@ -268,7 +298,7 @@ namespace WizardOfWor
         private void LeaveCage()
         {
             _inCage = false;
-            _player.MoveTo(_level.GetCellPosition(11, 6));
+            _player.MoveTo(_currentLevel.GetCellPosition(11, 6));
         }
 
         private void UpdateDeaths(float deltaTime)
@@ -301,7 +331,7 @@ namespace WizardOfWor
                 bullet.Update(deltaTime);
 
                 // Test whether the bullet hits a wall (non empty pixel)
-                if (_level.HasPixel(bullet.PixelPositionX, bullet.PixelPositionY))
+                if (_currentLevel.HasPixel(bullet.PixelPositionX, bullet.PixelPositionY))
                 {
                     if (_player.IsOwnedBullet(bullet))
                     {
@@ -328,6 +358,7 @@ namespace WizardOfWor
 
                         if (distanceX <= enemy.SpriteSheet.SpritePivot.X && distanceY <= enemy.SpriteSheet.SpritePivot.Y)
                         {
+                            _player.IncreaseScore(enemy.ScorePoints * _scoreModifier);
                             enemy.Die();
                             if (enemy.IsFiring())
                             {
@@ -371,8 +402,9 @@ namespace WizardOfWor
             GraphicsDevice.Clear(Color.Black);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            _spriteBatch.Draw(_level.RenderTarget2D, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _level.PixelWidth, _level.PixelHeight), LEVEL_DEFAULT_COLOR);
-            _level.DrawTunnels(LEVEL_DEFAULT_COLOR, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+            Color levelColor = _scoreModifier > 1 ? LEVEL_DOUBLE_SCORE_COLOR : LEVEL_DEFAULT_COLOR;
+            _spriteBatch.Draw(_currentLevel.RenderTarget2D, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _currentLevel.PixelWidth, _currentLevel.PixelHeight), levelColor);
+            _currentLevel.DrawTunnels(levelColor, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
 
             if (_gameStarted)
             {
@@ -397,16 +429,35 @@ namespace WizardOfWor
                 }
 
                 DrawRemainingLives(_spriteBatch);
-                _level.DrawRadar(_enemies);
+                _currentLevel.DrawRadar(_enemies);
             }
             _spriteBatch.End();
 
             GraphicsDevice.SetRenderTarget(null);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
             _spriteBatch.Draw(_renderTarget, new Rectangle(0, 0, SCREEN_WIDTH * SCREEN_SCALE, SCREEN_HEIGHT * SCREEN_SCALE), Color.White);
+            DrawScore(_player, _spriteBatch);
             _spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void DrawScore(Player player, SpriteBatch spriteBatch)
+        {
+            int score = player != null ? player.CurrentScore : 0;
+            Color color = player != null ? player.Color : PLAYER1_COLOR;
+            Vector2 position = new Vector2(280 * SCREEN_SCALE / 2, DISPLAY_OFFSET_Y * SCREEN_SCALE);
+            Vector2 scale = new Vector2(SCREEN_SCALE / 2, SCREEN_SCALE / 2);
+            Vector2 positionDelta = new Vector2(-16 * SCREEN_SCALE / 2, 0);
+            for(int i = 0; i<5;i++)
+            {
+                int number = score % 10;
+
+                _numbersSheet.DrawFrame(number, spriteBatch, position, 0, scale, color);
+
+                score = score / 10;
+                position += positionDelta;
+            }
         }
 
         #region Player
@@ -421,31 +472,60 @@ namespace WizardOfWor
         private void ProcessPlayerInput(float deltaTime)
         {
             bool isMoving = false;
-            Level.CanMoveData canMove = _level.CanMove(_player.PixelPositionX, _player.PixelPositionY, out int tunnel);
+            Level.CanMoveData canMove = _currentLevel.CanMove(_player.PixelPositionX, _player.PixelPositionY, out int tunnel);
             Vector2 lookTo = Vector2.Zero;
-            if (SimpleControls.IsLeftDown() && (canMove.Left || tunnel == Level.TUNNEL_LEFT))
-            {
-                lookTo.X = -1;
-                isMoving = true;
-                TunnelTeleport(_player, tunnel);
-            }
-            else if (SimpleControls.IsRightDown() && (canMove.Right || tunnel == Level.TUNNEL_RIGHT))
-            {
-                lookTo.X = 1;
-                isMoving = true;
-                TunnelTeleport(_player, tunnel);
-            }
-            else if (SimpleControls.IsDownDown() && canMove.Down)
-            {
-                lookTo.Y = 1;
-                isMoving = true;
-            }
-            else if (SimpleControls.IsUpDown() && canMove.Up)
-            {
-                lookTo.Y = -1;
-                isMoving = true;
-            }
+            bool isBetweenCells = !_currentLevel.IsOnGridCell(_player.PixelPositionX, _player.PixelPositionY);
 
+            if (isBetweenCells &&
+                (SimpleControls.IsLeftDown() && !canMove.Left
+                    || SimpleControls.IsRightDown() && !canMove.Right
+                    || SimpleControls.IsUpDown() && !canMove.Up
+                    || SimpleControls.IsDownDown() && !canMove.Down))
+            {
+                lookTo = _player.MoveDirection;
+                isMoving = true;
+            }
+            else
+            {
+                if (SimpleControls.IsLeftDown() && (canMove.Left || tunnel == Level.TUNNEL_LEFT))
+                {
+                    lookTo.X = -1;
+                    if (tunnel == Level.TUNNEL_LEFT)
+                    {
+                        isMoving = false;
+                        _player.LookTo(lookTo);
+                        TunnelTeleport(_player, tunnel);
+                    }
+                    else
+                    {
+                        isMoving = true;
+                    }
+                }
+                else if (SimpleControls.IsRightDown() && (canMove.Right || tunnel == Level.TUNNEL_RIGHT))
+                {
+                    lookTo.X = 1;
+                    if (tunnel == Level.TUNNEL_RIGHT)
+                    {
+                        isMoving = false;
+                        _player.LookTo(lookTo);
+                        TunnelTeleport(_player, tunnel);
+                    }
+                    else
+                    {
+                        isMoving = true;
+                    }
+                }
+                else if (SimpleControls.IsDownDown() && canMove.Down)
+                {
+                    lookTo.Y = 1;
+                    isMoving = true;
+                }
+                else if (SimpleControls.IsUpDown() && canMove.Up)
+                {
+                    lookTo.Y = -1;
+                    isMoving = true;
+                }
+            }
             if (SimpleControls.IsADown() && !_player.IsFiring())
             {
                 _player.Fire(Bullet.TargetTypes.Any);
@@ -464,7 +544,7 @@ namespace WizardOfWor
         {
             if (tunnel != Level.NO_TUNNEL)
             {
-                character.MoveTo(_level.GetTunnelPosition(3 - tunnel));
+                character.MoveTo(_currentLevel.GetTunnelPosition(3 - tunnel));
             }
         }
 
@@ -498,7 +578,14 @@ namespace WizardOfWor
                 _deaths.Add(new Death(_playerDeathSheet, player.PixelPositionX, player.PixelPositionY, Color.White, _player.CurrentRotation, _player.CurrentScale));
 
                 _playerDeathSound.Play();
-                ToCage((float)_playerDeathSound.Duration.TotalSeconds);
+                if (_levelState == 2)
+                {
+                    NextLevel();
+                }
+                else
+                {
+                    ToCage((float)_playerDeathSound.Duration.TotalSeconds);
+                }
             }
             else
             {
@@ -517,7 +604,7 @@ namespace WizardOfWor
 
         private void ToCage()
         {
-            _player.MoveTo(_level.GetCellPosition(11, 7));
+            _player.MoveTo(_currentLevel.GetCellPosition(11, 7));
             _player.LookTo(new Vector2(-1, 0));
             _player.SetFrame(1);
             _player.Visible = true;
@@ -533,7 +620,7 @@ namespace WizardOfWor
             {
                 remainingLives++;
             }
-            Vector2 startPosition = _level.GetCellPosition(11, 7);
+            Vector2 startPosition = _currentLevel.GetCellPosition(11, 7);
             for (int i = 0; i < MathF.Min(2 + 1 - offset, remainingLives); i++)
             {
                 _playerSheet.DrawFrame(1, spriteBatch, startPosition + new Vector2(-1, 0) * (i + offset) * 16 + new Vector2(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y), 0, new Vector2(-1, 1), _player.Color);
@@ -543,26 +630,32 @@ namespace WizardOfWor
 
         #region Enemies
 
-        private void SpawnEnemy(SpriteSheet enemySheet, Color color, bool canBecomeInvisible)
+        private void SpawnEnemy(SpriteSheet enemySheet, Color color, bool canBecomeInvisible, int score)
         {
-            Enemy enemy = new Enemy(enemySheet, color, canBecomeInvisible);
+            Enemy enemy = new Enemy(enemySheet, color, canBecomeInvisible, score);
 
-            int gridX = 1 + _random.Next(11);
-            int gridY = 1 + _random.Next(6);
-            enemy.MoveTo(_level.GetCellPosition(gridX, gridY));
-            enemy.LookTo(PickPossibleDirection(enemy, out int _));
+            enemy.MoveTo(_currentLevel.GetRandomPosition());
+            enemy.LookTo(_currentLevel.PickPossibleDirection(enemy, out int _));
 
             _enemies.Add(enemy);
         }
 
         private void SpawnWorluk()
         {
-            Worluk enemy = new Worluk(_worlukSheet, GARWOR_COLOR, _random.Next(0, 2) * 2 - 1);
+            Worluk enemy = new Worluk(_worlukSheet, GARWOR_COLOR, _random.Next(0, 2) * 2 - 1, WORLUK_SCORE);
 
-            int gridX = 1 + _random.Next(11);
-            int gridY = 1 + _random.Next(6);
-            enemy.MoveTo(_level.GetCellPosition(gridX, gridY));
-            enemy.LookTo(PickPossibleDirection(enemy, out int _));
+            enemy.MoveTo(_currentLevel.GetRandomPosition());
+            enemy.LookTo(_currentLevel.PickPossibleDirection(enemy, out int _));
+
+            _enemies.Add(enemy);
+        }
+
+        private void SpawnWizard()
+        {
+            Wizard enemy = new Wizard(_wizardSheet, _currentLevel, WIZARD_SCORE);
+
+            enemy.MoveTo(_currentLevel.GetRandomPosition());
+            enemy.LookTo(_currentLevel.PickPossibleDirection(enemy, out int _));
 
             _enemies.Add(enemy);
         }
@@ -574,9 +667,19 @@ namespace WizardOfWor
                 Enemy enemy = _enemies[i];
                 enemy.Update(deltaTime);
 
-                enemy.SetThresholdSpeed(_level.CurrentThreshold);
-                Vector2 newMoveDirection = PickPossibleDirection(enemy, out int tunnel);
-                enemy.LookTo(newMoveDirection);
+                enemy.SetThresholdSpeed(_currentLevel.CurrentThreshold);
+                Vector2 newMoveDirection;
+                int tunnel = Level.NO_TUNNEL;
+                if (enemy is Wizard)
+                {
+                    enemy.CanChangeDirection = true;
+                    newMoveDirection = enemy.MoveDirection;
+                }
+                else
+                {
+                    newMoveDirection = _currentLevel.PickPossibleDirection(enemy, out tunnel);
+                    enemy.LookTo(newMoveDirection);
+                }
 
                 if (newMoveDirection.X > 0 && tunnel == Level.TUNNEL_RIGHT
                     || newMoveDirection.X < 0 && tunnel == Level.TUNNEL_LEFT)
@@ -585,7 +688,8 @@ namespace WizardOfWor
                     {
                         enemy.Die();
                         _enemies.Remove(enemy);
-                        NextLevelPhase();
+                        //NextLevelPhase();
+                        NextLevel();
                     }
                     else
                     {
@@ -611,85 +715,6 @@ namespace WizardOfWor
             }
         }
 
-        private Vector2 PickPossibleDirection(Enemy character, out int tunnel)
-        {
-            tunnel = Level.NO_TUNNEL;
-            if (_level.IsOnGridCell(character.PixelPositionX, character.PixelPositionY))
-            {
-                if (character.CanChangeDirection)
-                {
-                    Level.CanMoveData canMove = _level.CanMove(character.PixelPositionX, character.PixelPositionY, out tunnel);
-
-                    List<Vector2> possibleDirections = new();
-                    if (character.MoveDirection.X > 0 || character.MoveDirection.X < 0)
-                    {
-                        if (character.MoveDirection.X > 0 && (canMove.Right || tunnel == Level.TUNNEL_RIGHT)
-                            || character.MoveDirection.X < 0 && (canMove.Left || tunnel == Level.TUNNEL_LEFT))
-                        {
-                            if (character.PreferredHorizontalDirection != 0)
-                            {
-                                character.CanChangeDirection = false;
-                                return character.MoveDirection;
-                            }
-                            else
-                            {
-                                possibleDirections.Add(character.MoveDirection);
-                            }
-                        }
-
-                        if (canMove.Up)
-                            possibleDirections.Add(new Vector2(0, -1));
-                        if (canMove.Down)
-                            possibleDirections.Add(new Vector2(0, 1));
-
-                        if (possibleDirections.Count == 0)
-                            possibleDirections.Add(-character.MoveDirection);
-                    }
-
-                    if (character.MoveDirection.Y > 0 || character.MoveDirection.Y < 0)
-                    {
-                        if (character.MoveDirection.Y > 0 && canMove.Down || character.MoveDirection.Y < 0 && canMove.Up)
-                        {
-                            possibleDirections.Add(character.MoveDirection);
-                        }
-
-                        if (canMove.Right || tunnel == Level.TUNNEL_RIGHT)
-                        {
-                            if (character.PreferredHorizontalDirection > 0)
-                            {
-                                character.CanChangeDirection = false;
-                                return new Vector2(1, 0);
-                            }
-                            possibleDirections.Add(new Vector2(1, 0));
-                        }
-                        if (canMove.Left || tunnel == Level.TUNNEL_LEFT)
-                        {
-                            if (character.PreferredHorizontalDirection < 0)
-                            {
-                                character.CanChangeDirection = false;
-                                return new Vector2(-1, 0);
-                            }
-                            possibleDirections.Add(new Vector2(-1, 0));
-                        }
-
-                        if (possibleDirections.Count == 0)
-                            possibleDirections.Add(-character.MoveDirection);
-                    }
-
-                    Vector2 chosenDirection = possibleDirections[_random.Next(0, possibleDirections.Count)];
-                    character.CanChangeDirection = false;
-
-                    return chosenDirection;
-                }
-            }
-            else
-            {
-                character.CanChangeDirection = true;
-            }
-
-            return character.MoveDirection;
-        }
-
         #endregion
 
         #region Level
@@ -697,6 +722,7 @@ namespace WizardOfWor
         {
             if (_levelState > 0)
             {
+                _applyDoubleScore = true;
                 NextLevelPhase();
             }
             else
@@ -708,14 +734,14 @@ namespace WizardOfWor
                 }
                 else
                 {
-                    if (_killCount >= 6 - _currentLevel)
+                    if (_killCount >= 6 - _currentStage)
                     {
                         if (_garworToSpawn >= _thorworToSpawn)
                         {
                             if (_garworToSpawn > 0)
                             {
                                 // spawn a garwor
-                                SpawnEnemy(_burworSheet, GARWOR_COLOR, canBecomeInvisible: true);
+                                SpawnEnemy(_burworSheet, GARWOR_COLOR, canBecomeInvisible: true, GARWOR_SCORE);
                                 _garworToSpawn--;
                             }
                         }
@@ -724,7 +750,7 @@ namespace WizardOfWor
                             if (_thorworToSpawn > 0)
                             {
                                 // spawn a thorwor
-                                SpawnEnemy(_thorworSheet, THORWAR_COLOR, canBecomeInvisible: true);
+                                SpawnEnemy(_thorworSheet, THORWOR_COLOR, canBecomeInvisible: true, THORWOR_SCORE);
                                 _thorworToSpawn--;
                             }
                         }

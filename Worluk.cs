@@ -11,7 +11,7 @@ namespace WizardOfWor
 {
     public class Worluk : Enemy
     {
-        public Worluk(SpriteSheet spriteSheet, Color color, int preferredDirection) : base(spriteSheet, color, false)
+        public Worluk(SpriteSheet spriteSheet, Color color, int preferredDirection, int score) : base(spriteSheet, color, false, score)
         {
             SetSpeed(SPEED_5);
             SetAnimationSpeed(20);

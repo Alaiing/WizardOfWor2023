@@ -25,9 +25,12 @@ namespace WizardOfWor
         protected int _preferredHorizontalDirection;
         public int PreferredHorizontalDirection => _preferredHorizontalDirection;
 
+        protected int _scorePoints;
+        public int ScorePoints => _scorePoints;
+
         private static Bullet _commonBullet;
         public static Bullet CommonBullet => _commonBullet;
-        public Enemy(SpriteSheet spriteSheet, Color color, bool canBecomeInvisible) : base(spriteSheet, null)
+        public Enemy(SpriteSheet spriteSheet, Color color, bool canBecomeInvisible, int scorePoints) : base(spriteSheet, null)
         {
             _thresholdSpeeds = new float[5];
             _thresholdSpeeds[0] = SPEED_1;
@@ -41,6 +44,7 @@ namespace WizardOfWor
             SetAnimationSpeed(SPEED_1);
             SetColor(color);
             _preferredHorizontalDirection = 0;
+            _scorePoints = scorePoints;
         }
 
         public override bool Visible
@@ -56,7 +60,7 @@ namespace WizardOfWor
             }
         }
 
-        public void Update(float deltaTime)
+        public virtual void Update(float deltaTime)
         {
             if (_canBecomeInvisible && Visible)
             {
