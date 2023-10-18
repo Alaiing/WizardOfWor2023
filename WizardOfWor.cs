@@ -19,6 +19,7 @@ namespace WizardOfWor
         private const int DISPLAY_OFFSET_Y = 7;
 
         private const int PLAYER_MAX_LIVES = 2;
+        private const float PLAYER_SPEED = 30;
         private const int BURWOR_AMOUNT = 6;
         private readonly Color PLAYER1_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
         private readonly Color BURWOR_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
@@ -27,6 +28,7 @@ namespace WizardOfWor
 
         private readonly Color LEVEL_DEFAULT_COLOR = new Color(0.286f, 0.318f, 0.820f, 1);
         private readonly Color LEVEL_DOUBLE_SCORE_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
+        private readonly Color LEVEL_WORLUK_COLOR = new Color(0.690f, 0.153f, 0.149f, 1f);
 
         private readonly int BURWOR_SCORE = 100;
         private readonly int GARWOR_SCORE = 200;
@@ -34,6 +36,17 @@ namespace WizardOfWor
         private readonly int WORLUK_SCORE = 1000;
         private readonly int WIZARD_SCORE = 1000;
 
+        private const float WORLUK_DEATH_DURATION = 5f;
+        private const float WORLUK_DEATH_COLOR_DURATION = 0.25f;
+        private const float WIZARD_DEATH_COLOR_DURATION = 0.5f;
+        private readonly Color[] WORLUK_DEATH_COLOR = { Color.Pink, Color.Cyan, Color.Yellow, Color.Purple, Color.Green };
+
+        private const int LEVEL_KILL_ENEMIES = 0;
+        private const int LEVEL_WORLUK = 1;
+        private const int LEVEL_WIZARD = 2;
+        private const int LEVEL_WORLUK_DEATH = 3;
+        private const int LEVEL_WIZARD_DEATH = 4;
+        private const int LEVEL_WORLUK_ESCAPE = 5;
 
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
@@ -68,6 +81,9 @@ namespace WizardOfWor
         private bool _gameStarted = false;
         private int _currentStage = 0;
         private int _levelState;
+        private Color _levelColor;
+        private Color _levelBackgroundColor;
+        private float _levelStateTimer;
         private int _garworToSpawn;
         private int _thorworToSpawn;
         private int _killCount;
@@ -76,6 +92,9 @@ namespace WizardOfWor
         private SoundEffect _playerShootSound;
         private SoundEffect _levelIntroSound;
         private SoundEffect _playerDeathSound;
+        private SoundEffect _worlukEscapeSound;
+        private SoundEffect _worlukDeathSound;
+        private SoundEffect _wizardDeathSound;
 
         private MusicManager _musicManager;
 
@@ -122,10 +141,15 @@ namespace WizardOfWor
             _levels[0] = new Level("Level1.txt", 12, 10, GraphicsDevice, _spriteBatch, _random);
             _levels[1] = new Level("Level2.txt", 12, 10, GraphicsDevice, _spriteBatch, _random);
             _currentLevel = _levels[0];
+            _levelColor = LEVEL_DEFAULT_COLOR;
 
             _playerShootSound = Content.Load<SoundEffect>("piou-bouche");
             _levelIntroSound = Content.Load<SoundEffect>("intro-bouche");
             _playerDeathSound = Content.Load<SoundEffect>("death-bouche");
+            _worlukEscapeSound = Content.Load<SoundEffect>("worluk-escape");
+            _worlukDeathSound = Content.Load<SoundEffect>("worluk-kill");
+            _wizardDeathSound = Content.Load<SoundEffect>("wizard-kill");
+
 
             _musicManager.LoadMusicSounds(Content);
         }
@@ -136,7 +160,7 @@ namespace WizardOfWor
         private void InitLevel()
         {
             _currentLevel = _levels[_currentStage % 2];
-            _currentLevel.Reset();
+            _currentLevel.Reset(_currentStage);
             if (_player == null)
             {
                 SpawnPlayer();
@@ -147,8 +171,6 @@ namespace WizardOfWor
             }
             ToCage();
 
-            _scoreModifier = _applyDoubleScore ? 2 : 1;
-            _applyDoubleScore = false;
 
             _garworToSpawn = _thorworToSpawn = _currentStage + 1;
             _killCount = 0;
@@ -157,6 +179,19 @@ namespace WizardOfWor
             _levelStartTimer = (float)_levelIntroSound.Duration.TotalSeconds;
             _levelStarting = true;
             _levelState = 0;
+            _levelBackgroundColor = Color.Black;
+
+            if (_applyDoubleScore)
+            {
+                _scoreModifier = 2;
+                _levelColor = LEVEL_DOUBLE_SCORE_COLOR;
+            }
+            else
+            {
+                _scoreModifier = 1;
+                _levelColor = LEVEL_DEFAULT_COLOR;
+            }
+            _applyDoubleScore = false;
         }
 
         private void StartLevel()
@@ -175,28 +210,61 @@ namespace WizardOfWor
         {
             switch (_levelState)
             {
-                case 0:
-                    if (_currentStage > 0)
+                case LEVEL_KILL_ENEMIES:
+                    if (_currentStage >= 0)
                     {
-                        _levelState++;
+                        _levelState = LEVEL_WORLUK;
                         SpawnWorluk();
+                        _musicManager.StopMusic();
+                        _musicManager.StartBossMusic();
+
+                        _levelColor = LEVEL_WORLUK_COLOR;
                     }
                     else
                     {
                         NextLevel();
                     }
                     break;
-                case 1:
-                    _levelState++;
-                    if (_random.Next(2) == 0)
+                case LEVEL_WORLUK:
+                    //if (_random.Next(2) == 0)
+                    {
+                        _levelState = LEVEL_WIZARD;
                         SpawnWizard();
-                    else
-                        NextLevel();
+                    }
+                    //else
+                    //{
+                    //    _levelState = LEVEL_WORLUK_DEATH;
+                    //    _musicManager.StopMusic();
+                    //    _worlukDeathSound.Play();
+                    //    _levelStateTimer = 0;
+                    //    _player.KillBullet();
+                    //}
                     break;
-                case 2:
+
+                case LEVEL_WIZARD:
+                    _levelState = LEVEL_WIZARD_DEATH;
+                    _musicManager.StopMusic();
+                    _wizardDeathSound.Play();
+                    _levelStateTimer = 0;
+                    _player.KillBullet();
+                    Enemy.KillEnemyBullet();
+                    break;
+
+                case LEVEL_WORLUK_DEATH:
+                    NextLevel();
+                    break;
+
+                case LEVEL_WIZARD_DEATH:
                     NextLevel();
                     break;
             }
+        }
+
+        private void WorlukEscape()
+        {
+            _musicManager.StopMusic();
+            _worlukEscapeSound.Play();
+            _levelState = LEVEL_WORLUK_ESCAPE;
         }
 
         private void NextLevel()
@@ -219,7 +287,7 @@ namespace WizardOfWor
 
         private void ClearLevel()
         {
-            _currentLevel.Reset();
+            _currentLevel.Reset(_currentStage);
             _enemies.Clear();
             _bullets.Clear();
             Enemy.KillEnemyBullet();
@@ -230,68 +298,115 @@ namespace WizardOfWor
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-
-            if (_levelStarting)
+            switch (_levelState)
             {
-                _levelStartTimer -= deltaTime;
-                if (_levelStartTimer <= 0)
-                {
-                    StartLevel();
-                }
+                case LEVEL_WORLUK_DEATH:
+                     _levelStateTimer += deltaTime;
+                    int colorIndex = ((int)Math.Floor(_levelStateTimer / WORLUK_DEATH_COLOR_DURATION)) % WORLUK_DEATH_COLOR.Length;
+                    Color backgroundColor = WORLUK_DEATH_COLOR[colorIndex];
+                    float colorAlpha = _levelStateTimer / WORLUK_DEATH_COLOR_DURATION - MathF.Floor(_levelStateTimer / WORLUK_DEATH_COLOR_DURATION);
+                    backgroundColor.R = (byte)(backgroundColor.R * colorAlpha);
+                    backgroundColor.G = (byte)(backgroundColor.G * colorAlpha);
+                    backgroundColor.B = (byte)(backgroundColor.B * colorAlpha);
+                    _levelBackgroundColor = backgroundColor;
+                    if (_levelStateTimer > _worlukDeathSound.Duration.TotalSeconds)
+                    {
+                        NextLevelPhase();
+                    }
+                    break;
+
+                case LEVEL_WIZARD_DEATH:
+                    _levelStateTimer += deltaTime;
+                    float colorValue = _levelStateTimer / WIZARD_DEATH_COLOR_DURATION - MathF.Floor(_levelStateTimer / WIZARD_DEATH_COLOR_DURATION);
+                    _levelColor = new Color(colorValue, colorValue, colorValue, 1f);
+                    if (_levelStateTimer > _wizardDeathSound.Duration.TotalSeconds)
+                    {
+                        NextLevelPhase();
+                    }
+                    break;
+
+                case LEVEL_WORLUK_ESCAPE:
+                    _levelStateTimer += deltaTime;
+                    if (_levelStateTimer > _worlukEscapeSound.Duration.TotalSeconds)
+                    {
+                        NextLevel();
+                    }
+                    break;
+
+                default:
+                    if (_levelStarting)
+                    {
+                        _levelStartTimer -= deltaTime;
+                        if (_levelStartTimer <= 0)
+                        {
+                            StartLevel();
+                        }
+                    }
+
+                    SimpleControls.GetStates();
+
+                    if (_gameStarted)
+                    {
+                        _currentLevel.Update(deltaTime);
+
+                        if (_toCageTimer > 0)
+                        {
+                            _toCageTimer -= deltaTime;
+                            if (_toCageTimer <= 0)
+                            {
+                                ToCage();
+                            }
+                        }
+
+                        if (SimpleControls.IsEscapeDown())
+                            Exit();
+
+                        if (SimpleControls.IsCheatKillDown())
+                        {
+                            if (_enemies.Count > 0)
+                            {
+                                KillEnemy(_enemies[0]);
+                                _killCount++;
+                            }
+                        }
+
+
+                        if (_inCage)
+                        {
+                            _inCageTimer += deltaTime;
+                            if ((SimpleControls.IsAnyMoveKeyDown() && !_levelStarting) || _inCageTimer >= 10f)
+                            {
+                                LeaveCage();
+                            }
+                        }
+                        else
+                        {
+                            if (_player.Visible)
+                            {
+                                ProcessPlayerInput(deltaTime);
+                            }
+                        }
+
+                        UpdateEnemies(deltaTime);
+
+                        CheckPlayerDeath();
+
+                        UpdateBullets(deltaTime);
+
+                        _musicManager.Update(deltaTime, _currentLevel.CurrentThreshold);
+                    }
+                    else
+                    {
+                        if (SimpleControls.IsStartDown() && !_levelStarting)
+                        {
+                            InitLevel();
+                        }
+                    }
+                    break;
             }
 
-            SimpleControls.GetStates();
+            UpdateDeaths(deltaTime);
 
-            if (_gameStarted)
-            {
-                _currentLevel.Update(deltaTime);
-
-                if (_toCageTimer > 0)
-                {
-                    _toCageTimer -= deltaTime;
-                    if (_toCageTimer <= 0)
-                    {
-                        ToCage();
-                    }
-                }
-
-                if (SimpleControls.IsEscapeDown())
-                    Exit();
-
-
-                if (_inCage)
-                {
-                    _inCageTimer += deltaTime;
-                    if ((SimpleControls.IsAnyMoveKeyDown() && !_levelStarting) || _inCageTimer >= 10f)
-                    {
-                        LeaveCage();
-                    }
-                }
-                else
-                {
-                    if (_player.Visible)
-                    {
-                        ProcessPlayerInput(deltaTime);
-                    }
-                }
-
-                UpdateEnemies(deltaTime);
-
-                CheckPlayerDeath();
-
-                UpdateBullets(deltaTime);
-
-                UpdateDeaths(deltaTime);
-
-                _musicManager.Update(deltaTime, _currentLevel.CurrentThreshold);
-            }
-            else
-            {
-                if (SimpleControls.IsStartDown() && !_levelStarting)
-                {
-                    InitLevel();
-                }
-            }
             base.Update(gameTime);
         }
 
@@ -359,12 +474,7 @@ namespace WizardOfWor
                         if (distanceX <= enemy.SpriteSheet.SpritePivot.X && distanceY <= enemy.SpriteSheet.SpritePivot.Y)
                         {
                             _player.IncreaseScore(enemy.ScorePoints * _scoreModifier);
-                            enemy.Die();
-                            if (enemy.IsFiring())
-                            {
-                                enemy.KillBullet();
-                            }
-                            _enemies.Remove(enemy);
+                            KillEnemy(enemy);
                             bullet.Origin.KillBullet();
 
                             _deaths.Add(new Death(_enemyDeathSheet, enemy.PixelPositionX, enemy.PixelPositionY, enemy.Color, 0, Vector2.One));
@@ -395,16 +505,25 @@ namespace WizardOfWor
             }
         }
 
+        private void KillEnemy(Enemy enemy)
+        {
+            enemy.Die();
+            if (enemy.IsFiring())
+            {
+                enemy.KillBullet();
+            }
+            _enemies.Remove(enemy);
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             // TODO: Add your drawing code here
             GraphicsDevice.SetRenderTarget(_renderTarget);
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(_levelBackgroundColor);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            Color levelColor = _scoreModifier > 1 ? LEVEL_DOUBLE_SCORE_COLOR : LEVEL_DEFAULT_COLOR;
-            _spriteBatch.Draw(_currentLevel.RenderTarget2D, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _currentLevel.PixelWidth, _currentLevel.PixelHeight), levelColor);
-            _currentLevel.DrawTunnels(levelColor, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+            _spriteBatch.Draw(_currentLevel.RenderTarget2D, new Rectangle(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, _currentLevel.PixelWidth, _currentLevel.PixelHeight), _levelColor);
+            _currentLevel.DrawTunnels(_levelColor, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
 
             if (_gameStarted)
             {
@@ -449,7 +568,7 @@ namespace WizardOfWor
             Vector2 position = new Vector2(280 * SCREEN_SCALE / 2, DISPLAY_OFFSET_Y * SCREEN_SCALE);
             Vector2 scale = new Vector2(SCREEN_SCALE / 2, SCREEN_SCALE / 2);
             Vector2 positionDelta = new Vector2(-16 * SCREEN_SCALE / 2, 0);
-            for(int i = 0; i<5;i++)
+            for (int i = 0; i < 5; i++)
             {
                 int number = score % 10;
 
@@ -464,7 +583,7 @@ namespace WizardOfWor
         private void SpawnPlayer()
         {
             _player = new Player(_playerSheet, PLAYER_MAX_LIVES, _playerShootSound);
-            _player.SetSpeed(20);
+            _player.SetSpeed(PLAYER_SPEED);
             _player.SetAnimationSpeed(10);
             _player.SetColor(PLAYER1_COLOR);
         }
@@ -667,7 +786,8 @@ namespace WizardOfWor
                 Enemy enemy = _enemies[i];
                 enemy.Update(deltaTime);
 
-                enemy.SetThresholdSpeed(_currentLevel.CurrentThreshold);
+                float speedModificator = _currentLevel.CurrentThreshold == _currentStage / 2 && _currentStage % 2 != 0 ? 1.1f : 1f;
+                enemy.SetThresholdSpeed(_currentLevel.CurrentThreshold, speedModificator);
                 Vector2 newMoveDirection;
                 int tunnel = Level.NO_TUNNEL;
                 if (enemy is Wizard)
@@ -688,8 +808,7 @@ namespace WizardOfWor
                     {
                         enemy.Die();
                         _enemies.Remove(enemy);
-                        //NextLevelPhase();
-                        NextLevel();
+                        WorlukEscape();
                     }
                     else
                     {

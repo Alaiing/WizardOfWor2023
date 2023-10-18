@@ -191,5 +191,10 @@ namespace WizardOfWor
             return _keyboardState.IsKeyDown(Keys.Escape);
         }
 
+        public static bool IsCheatKillDown()
+        {
+            return _keyboardState.IsKeyDown(Keys.F3);
+        }
+
     }
 }

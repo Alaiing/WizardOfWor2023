@@ -45,7 +45,7 @@ namespace WizardOfWor
             return false;
         }
 
-        public override void SetThresholdSpeed(int threshold)
+        public override void SetThresholdSpeed(int threshold, float modificator)
         {
             // DO NOTHING
         }

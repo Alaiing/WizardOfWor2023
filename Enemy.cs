@@ -108,9 +108,9 @@ namespace WizardOfWor
             return _commonBullet != null;
         }
 
-        public virtual void SetThresholdSpeed(int threshold)
+        public virtual void SetThresholdSpeed(int threshold, float modificator)
         {
-            float newSpeed = _thresholdSpeeds[threshold];
+            float newSpeed = _thresholdSpeeds[threshold] * modificator;
             SetSpeed(newSpeed);
             SetAnimationSpeed(newSpeed);
         }

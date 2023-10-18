@@ -145,6 +145,12 @@
 /processorParam:TextureFormat=Color
 /build:thorwor.png
 
+#begin wizard-kill.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:wizard-kill.wav
+
 #begin wizardofwor.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -156,6 +162,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:wizardofwor.png
+
+#begin worluk-escape.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:worluk-escape.wav
+
+#begin worluk-intro.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:worluk-intro.wav
+
+#begin worluk-kill.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:worluk-kill.wav
+
+#begin worluk-loop.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:worluk-loop.wav
 
 #begin worluk.png
 /importer:TextureImporter

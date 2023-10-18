@@ -90,10 +90,10 @@ namespace WizardOfWor
             _random = random;
         }
 
-        public void Reset()
+        public void Reset(int currentStage)
         {
             _elapsedTime = 0;
-            _currentThreshold = 0;
+            _currentThreshold = Math.Min(MAX_THRESHOLDS, currentStage / 2);
             _tunnelTimer = 0;
             TunnelsOpen = true;
         }
@@ -116,6 +116,7 @@ namespace WizardOfWor
                 TunnelsOpen = !TunnelsOpen;
                 _tunnelTimer -= TUNNEL_COOLDOWN;
             }
+            TunnelsOpen = false;
         }
 
         public Vector2 GetCellPosition(int x, int y)

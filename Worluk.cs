@@ -30,7 +30,7 @@ namespace WizardOfWor
             base.Draw(spriteBatch, displayOffsetX, displayOffsetY);
         }
 
-        public override void SetThresholdSpeed(int threshold)
+        public override void SetThresholdSpeed(int threshold, float modificator)
         {
             // DO NOTHING
         }
