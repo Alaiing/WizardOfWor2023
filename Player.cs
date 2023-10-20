@@ -16,6 +16,7 @@ namespace WizardOfWor
         public int RemainingLives => _remainingLives;
         private int _currentScore;
         public int CurrentScore => _currentScore;
+        public bool InCage { get; set; }
 
         public Player(SpriteSheet spriteSheet, int maxLives, SoundEffect shootSound = null) : base(spriteSheet, shootSound)
         {

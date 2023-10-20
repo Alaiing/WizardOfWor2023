@@ -74,7 +74,7 @@ namespace WizardOfWor
 
         public virtual bool CanFireAtPlayer(Player player)
         {
-            return player.Visible 
+            return !player.InCage && player.Visible 
                 && !IsAnyEnemyFiring() 
                 && (MoveDirection.X != 0 && PixelPositionY == player.PixelPositionY && MathF.Sign(MoveDirection.X) == MathF.Sign(player.PixelPositionX - PixelPositionX)
     || MoveDirection.Y != 0 && PixelPositionX == player.PixelPositionX && MathF.Sign(MoveDirection.Y) == MathF.Sign(player.PixelPositionY - PixelPositionY));
@@ -113,6 +113,14 @@ namespace WizardOfWor
             float newSpeed = _thresholdSpeeds[threshold] * modificator;
             SetSpeed(newSpeed);
             SetAnimationSpeed(newSpeed);
+        }
+
+        public void UpdateVisible(Player player)
+        {
+            if (!Visible && (PixelPositionY == player.PixelPositionY || PixelPositionX == player.PixelPositionX))
+            {
+                Visible = true;
+            }
         }
     }
 }
