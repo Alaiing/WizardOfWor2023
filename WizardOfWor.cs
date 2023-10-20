@@ -22,6 +22,7 @@ namespace WizardOfWor
         private const float PLAYER_SPEED = 30;
         private const int BURWOR_AMOUNT = 6;
         private readonly Color PLAYER1_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
+        private readonly Color PLAYER2_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
         private readonly Color BURWOR_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
         private readonly Color GARWOR_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
         private readonly Color THORWOR_COLOR = new Color(0.694f, 0.157f, 0.153f, 1f);
@@ -35,6 +36,7 @@ namespace WizardOfWor
         private readonly int THORWOR_SCORE = 500;
         private readonly int WORLUK_SCORE = 1000;
         private readonly int WIZARD_SCORE = 1000;
+        private readonly int OTHER_PLAYER_SCORE = 1000;
 
         private const float WORLUK_DEATH_DURATION = 5f;
         private const float WORLUK_DEATH_COLOR_DURATION = 0.25f;
@@ -56,7 +58,10 @@ namespace WizardOfWor
         private Level _currentLevel;
         private Level[] _levels;
 
-        private Player _player;
+        private Player _player1;
+        private Player _player2;
+        private bool IsMultiPlayer => _player2 != null;
+
         private SpriteSheet _playerSheet;
         private int _scoreModifier;
         private bool _applyDoubleScore;
@@ -117,6 +122,7 @@ namespace WizardOfWor
             _renderTarget = new RenderTarget2D(GraphicsDevice, SCREEN_WIDTH, SCREEN_HEIGHT);
             _scoreModifier = 1;
             _applyDoubleScore = false;
+            _player1 = SpawnPlayer(SimpleControls.PlayerNumber.Player1, PLAYER1_COLOR, 11, 7);
 
             base.Initialize();
         }
@@ -156,20 +162,30 @@ namespace WizardOfWor
         private float _levelStartTimer;
         private bool _levelStarting = false;
 
-        private void InitLevel()
+        private void StartGame(bool multiplayer)
         {
-            _currentLevel = _levels[_currentStage % 2];
-            _currentLevel.Reset(_currentStage);
-            if (_player == null)
+            _player1 = SpawnPlayer(SimpleControls.PlayerNumber.Player1, PLAYER1_COLOR, 11, 7);
+            if (multiplayer)
             {
-                SpawnPlayer();
+                _player2 = SpawnPlayer(SimpleControls.PlayerNumber.Player2, PLAYER2_COLOR, 1, 7);
             }
             else
             {
-                _player.ResetLives();
+                _player2 = null;
             }
-            ToCage(_player);
+            _currentStage = 0;
+            _applyDoubleScore = false;
+            _levelStarting = false;
+            InitLevel();
+        }
 
+        private void InitLevel()
+        {
+            _currentLevel = _levels[_currentStage % 2];
+            _levelState = 0;
+            _currentLevel.Reset(_currentStage);
+            ToCage(_player1);
+            ToCage(_player2);
 
             _garworToSpawn = _thorworToSpawn = _currentStage + 1;
             _killCount = 0;
@@ -177,7 +193,6 @@ namespace WizardOfWor
             _levelIntroSound.Play();
             _levelStartTimer = (float)_levelIntroSound.Duration.TotalSeconds;
             _levelStarting = true;
-            _levelState = 0;
             _levelBackgroundColor = Color.Black;
 
             if (_applyDoubleScore)
@@ -236,7 +251,7 @@ namespace WizardOfWor
                         _musicManager.StopMusic();
                         _worlukDeathSound.Play();
                         _levelStateTimer = 0;
-                        _player.KillBullet();
+                        KillPlayerBullets();
                         Enemy.KillEnemyBullet();
                     }
                     break;
@@ -246,7 +261,7 @@ namespace WizardOfWor
                     _musicManager.StopMusic();
                     _wizardDeathSound.Play();
                     _levelStateTimer = 0;
-                    _player.KillBullet();
+                    KillPlayerBullets();
                     Enemy.KillEnemyBullet();
                     break;
 
@@ -281,7 +296,6 @@ namespace WizardOfWor
             _gameStarted = false;
             _currentStage = 0;
             _scoreModifier = 1;
-            _player.ResetScore();
             _musicManager.StopMusic();
         }
 
@@ -290,8 +304,8 @@ namespace WizardOfWor
             _currentLevel.Reset(_currentStage);
             _enemies.Clear();
             _bullets.Clear();
+            KillPlayerBullets();
             Enemy.KillEnemyBullet();
-            _player.KillBullet();
         }
 
         protected override void Update(GameTime gameTime)
@@ -301,7 +315,7 @@ namespace WizardOfWor
             switch (_levelState)
             {
                 case LEVEL_WORLUK_DEATH:
-                     _levelStateTimer += deltaTime;
+                    _levelStateTimer += deltaTime;
                     int colorIndex = ((int)Math.Floor(_levelStateTimer / WORLUK_DEATH_COLOR_DURATION)) % WORLUK_DEATH_COLOR.Length;
                     Color backgroundColor = WORLUK_DEATH_COLOR[colorIndex];
                     float colorAlpha = _levelStateTimer / WORLUK_DEATH_COLOR_DURATION - MathF.Floor(_levelStateTimer / WORLUK_DEATH_COLOR_DURATION);
@@ -342,6 +356,26 @@ namespace WizardOfWor
                             StartLevel();
                         }
                     }
+                    else
+                    {
+                        if (SimpleControls.IsStartDown())
+                        {
+                            if (_gameStarted)
+                            {
+                                EndGame();
+                            }
+                            StartGame(multiplayer: false);
+                        }
+                        else if (SimpleControls.IsSelectDown())
+                        {
+                            if (_gameStarted)
+                            {
+                                EndGame();
+                            }
+                            StartGame(multiplayer: true);
+                        }
+                    }
+
 
                     SimpleControls.GetStates();
 
@@ -349,14 +383,8 @@ namespace WizardOfWor
                     {
                         _currentLevel.Update(deltaTime);
 
-                        if (_toCageTimer > 0)
-                        {
-                            _toCageTimer -= deltaTime;
-                            if (_toCageTimer <= 0)
-                            {
-                                ToCage(_player);
-                            }
-                        }
+                        UpdatePlayerToCage(_player1, deltaTime);
+                        UpdatePlayerToCage(_player2, deltaTime);
 
                         if (SimpleControls.IsEscapeDown())
                             Exit();
@@ -370,37 +398,17 @@ namespace WizardOfWor
                             }
                         }
 
-
-                        if (_player.InCage)
-                        {
-                            _inCageTimer += deltaTime;
-                            if ((SimpleControls.IsAnyMoveKeyDown() && !_levelStarting) || _inCageTimer >= 10f)
-                            {
-                                LeaveCage(_player);
-                            }
-                        }
-                        else
-                        {
-                            if (_player.Visible)
-                            {
-                                ProcessPlayerInput(_player, deltaTime);
-                            }
-                        }
+                        UpdatePlayerInCage(_player1, deltaTime);
+                        UpdatePlayerInCage(_player2, deltaTime);
 
                         UpdateEnemies(deltaTime);
 
-                        CheckPlayerDeath();
+                        CheckPlayerDeath(_player1);
+                        CheckPlayerDeath(_player2);
 
                         UpdateBullets(deltaTime);
 
                         _musicManager.Update(deltaTime, _currentLevel.CurrentThreshold);
-                    }
-                    else
-                    {
-                        if (SimpleControls.IsStartDown() && !_levelStarting)
-                        {
-                            InitLevel();
-                        }
                     }
                     break;
             }
@@ -410,10 +418,45 @@ namespace WizardOfWor
             base.Update(gameTime);
         }
 
+        private void UpdatePlayerToCage(Player player, float deltaTime)
+        {
+
+            if (player != null && player.TimeToCage > 0)
+            {
+                player.TimeToCage -= deltaTime;
+                if (player.TimeToCage <= 0)
+                {
+                    ToCage(player);
+                }
+            }
+        }
+
+        private void UpdatePlayerInCage(Player player, float deltaTime)
+        {
+            if (player != null)
+            {
+                if (player.InCage)
+                {
+                    player.TimeInCage += deltaTime;
+                    if ((SimpleControls.IsAnyMoveKeyDown(player.PlayerNumber) && !_levelStarting) || player.TimeInCage >= 10f)
+                    {
+                        LeaveCage(player);
+                    }
+                }
+                else
+                {
+                    if (player.Visible)
+                    {
+                        ProcessPlayerInput(player, deltaTime);
+                    }
+                }
+            }
+        }
+
         private void LeaveCage(Player player)
         {
             player.InCage = false;
-            player.MoveTo(_currentLevel.GetCellPosition(11, 6));
+            player.MoveTo(_currentLevel.GetCellPosition(player.CagePositionX, player.CagePositionY - 1));
         }
 
         private void UpdateDeaths(float deltaTime)
@@ -431,10 +474,15 @@ namespace WizardOfWor
         private void UpdateBullets(float deltaTime)
         {
             _bullets.Clear();
-            if (_player.IsFiring())
+            if (_player1.IsFiring())
             {
-                _bullets.Add(_player.Bullet);
+                _bullets.Add(_player1.Bullet);
             }
+            if (IsMultiPlayer && _player2.IsFiring())
+            {
+                _bullets.Add(_player2.Bullet);
+            }
+
             if (Enemy.IsAnyEnemyFiring())
             {
                 _bullets.Add(Enemy.CommonBullet);
@@ -453,21 +501,19 @@ namespace WizardOfWor
                 }
 
                 // Test if the player's bullet hits an enemy
-                int distanceX, distanceY;
                 if (bullet.TargetType == Bullet.TargetTypes.Any)
                 {
-                    // TODO: include players
-
                     for (int j = 0; j < _enemies.Count; j++)
                     {
                         Enemy enemy = _enemies[j];
-                        distanceX = (int)MathF.Abs(enemy.PixelPositionX - bullet.PixelPositionX + enemy.SpriteSheet.SpritePivot.X);
-                        distanceY = (int)MathF.Abs(enemy.PixelPositionY - bullet.PixelPositionY + enemy.SpriteSheet.SpritePivot.Y);
 
-                        if (distanceX <= enemy.SpriteSheet.SpritePivot.X && distanceY <= enemy.SpriteSheet.SpritePivot.Y)
+                        if (bullet.TestHit(enemy))
                         {
-                            _player.IncreaseScore(enemy.ScorePoints * _scoreModifier);
-                            _player.KillBullet();
+                            if (bullet.Origin is Player player)
+                            {
+                                player.IncreaseScore(enemy.ScorePoints * _scoreModifier);
+                                player.KillBullet();
+                            }
                             KillEnemy(enemy);
 
                             _deaths.Add(new Death(_enemyDeathSheet, enemy.PixelPositionX, enemy.PixelPositionY, enemy.Color, 0, Vector2.One));
@@ -478,24 +524,32 @@ namespace WizardOfWor
                     }
                 }
 
-                // Test if an enemy's bullet hits the player
-                if (bullet.TargetType == Bullet.TargetTypes.Player)
+                // Test if any bullet hits the player
+                //if (bullet.TargetType == Bullet.TargetTypes.Player)
                 {
-                    // TODO: test both players
-
-                    if (_player.Visible)
-                    {
-                        distanceX = (int)MathF.Abs(_player.PixelPositionX - bullet.PixelPositionX + _player.SpriteSheet.SpritePivot.X);
-                        distanceY = (int)MathF.Abs(_player.PixelPositionY - bullet.PixelPositionY + _player.SpriteSheet.SpritePivot.Y);
-
-                        if (distanceX <= _player.SpriteSheet.SpritePivot.X && distanceY <= _player.SpriteSheet.SpritePivot.Y)
-                        {
-                            KillPlayer(_player);
-                            bullet.Origin.KillBullet();
-                        }
-                    }
+                    TestBulletKillsPlayer(bullet, _player1);
+                    TestBulletKillsPlayer(bullet, _player2);
                 }
             }
+        }
+
+        private bool TestBulletKillsPlayer(Bullet bullet, Player player)
+        {
+            if (player != null && player.Visible && bullet.Origin != player)
+            {
+                if (bullet.TestHit(player))
+                {
+                    KillPlayer(player);
+                    if (bullet.Origin is Player otherPlayer)
+                    {
+                        otherPlayer.IncreaseScore(OTHER_PLAYER_SCORE);
+                    }
+                    bullet.Origin.KillBullet();
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void KillEnemy(Enemy enemy)
@@ -520,9 +574,13 @@ namespace WizardOfWor
 
             if (_gameStarted)
             {
-                if (_player.IsAlive)
+                if (_player1.IsAlive)
                 {
-                    _player.Draw(_spriteBatch, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+                    _player1.Draw(_spriteBatch, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
+                }
+                if (IsMultiPlayer && _player2.IsAlive)
+                {
+                    _player2.Draw(_spriteBatch, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
                 }
 
                 foreach (Character enemy in _enemies)
@@ -540,7 +598,8 @@ namespace WizardOfWor
                     death.Draw(_spriteBatch, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y);
                 }
 
-                DrawRemainingLives(_player, _spriteBatch);
+                DrawRemainingLives(_player1, _spriteBatch);
+                DrawRemainingLives(_player2, _spriteBatch);
                 _currentLevel.DrawRadar(_enemies);
             }
             _spriteBatch.End();
@@ -548,7 +607,8 @@ namespace WizardOfWor
             GraphicsDevice.SetRenderTarget(null);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
             _spriteBatch.Draw(_renderTarget, new Rectangle(0, 0, SCREEN_WIDTH * SCREEN_SCALE, SCREEN_HEIGHT * SCREEN_SCALE), Color.White);
-            DrawScore(_spriteBatch, _player, 280);
+            DrawScore(_spriteBatch, _player1, 280);
+            DrawScore(_spriteBatch, _player2, 89);
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -556,29 +616,34 @@ namespace WizardOfWor
 
         private void DrawScore(SpriteBatch spriteBatch, Player player, int positionX)
         {
-            int score = player != null ? player.CurrentScore : 0;
-            Color color = player != null ? player.Color : PLAYER1_COLOR;
-            Vector2 position = new Vector2(positionX * SCREEN_SCALE / 2, DISPLAY_OFFSET_Y * SCREEN_SCALE);
-            Vector2 scale = new Vector2(SCREEN_SCALE / 2, SCREEN_SCALE / 2);
-            Vector2 positionDelta = new Vector2(-16 * SCREEN_SCALE / 2, 0);
-            for (int i = 0; i < 5; i++)
+            if (player != null)
             {
-                int number = score % 10;
+                int score = player != null ? player.CurrentScore : 0;
+                Color color = player != null ? player.Color : PLAYER1_COLOR;
+                Vector2 position = new Vector2(positionX * SCREEN_SCALE / 2, DISPLAY_OFFSET_Y * SCREEN_SCALE);
+                Vector2 scale = new Vector2(SCREEN_SCALE / 2, SCREEN_SCALE / 2);
+                Vector2 positionDelta = new Vector2(-16 * SCREEN_SCALE / 2, 0);
+                for (int i = 0; i < 5; i++)
+                {
+                    int number = score % 10;
 
-                _numbersSheet.DrawFrame(number, spriteBatch, position, 0, scale, color);
+                    _numbersSheet.DrawFrame(number, spriteBatch, position, 0, scale, color);
 
-                score = score / 10;
-                position += positionDelta;
+                    score = score / 10;
+                    position += positionDelta;
+                }
             }
         }
 
         #region Player
-        private void SpawnPlayer()
+        private Player SpawnPlayer(SimpleControls.PlayerNumber playerNumber, Color color, int cageX, int cageY)
         {
-            _player = new Player(_playerSheet, PLAYER_MAX_LIVES, _playerShootSound);
-            _player.SetSpeed(PLAYER_SPEED);
-            _player.SetAnimationSpeed(10);
-            _player.SetColor(PLAYER1_COLOR);
+            Player player = new Player(_playerSheet, PLAYER_MAX_LIVES, _playerShootSound, cageX, cageY, playerNumber);
+            player.SetSpeed(PLAYER_SPEED);
+            player.SetAnimationSpeed(10);
+            player.SetColor(color);
+
+            return player;
         }
 
         private void ProcessPlayerInput(Player player, float deltaTime)
@@ -589,56 +654,56 @@ namespace WizardOfWor
             bool isBetweenCells = !_currentLevel.IsOnGridCell(player.PixelPositionX, player.PixelPositionY);
 
             if (isBetweenCells &&
-                (SimpleControls.IsLeftDown() && !canMove.Left
-                    || SimpleControls.IsRightDown() && !canMove.Right
-                    || SimpleControls.IsUpDown() && !canMove.Up
-                    || SimpleControls.IsDownDown() && !canMove.Down))
+                (SimpleControls.IsLeftDown(player.PlayerNumber) && !canMove.Left
+                    || SimpleControls.IsRightDown(player.PlayerNumber) && !canMove.Right
+                    || SimpleControls.IsUpDown(player.PlayerNumber) && !canMove.Up
+                    || SimpleControls.IsDownDown(player.PlayerNumber) && !canMove.Down))
             {
                 lookTo = player.MoveDirection;
                 isMoving = true;
             }
             else
             {
-                if (SimpleControls.IsLeftDown() && (canMove.Left || tunnel == Level.TUNNEL_LEFT))
+                if (SimpleControls.IsLeftDown(player.PlayerNumber) && (canMove.Left || tunnel == Level.TUNNEL_LEFT))
                 {
                     lookTo.X = -1;
                     if (tunnel == Level.TUNNEL_LEFT)
                     {
                         isMoving = false;
                         player.LookTo(lookTo);
-                        TunnelTeleport(_player, tunnel);
+                        TunnelTeleport(player, tunnel);
                     }
                     else
                     {
                         isMoving = true;
                     }
                 }
-                else if (SimpleControls.IsRightDown() && (canMove.Right || tunnel == Level.TUNNEL_RIGHT))
+                else if (SimpleControls.IsRightDown(player.PlayerNumber) && (canMove.Right || tunnel == Level.TUNNEL_RIGHT))
                 {
                     lookTo.X = 1;
                     if (tunnel == Level.TUNNEL_RIGHT)
                     {
                         isMoving = false;
                         player.LookTo(lookTo);
-                        TunnelTeleport(_player, tunnel);
+                        TunnelTeleport(player, tunnel);
                     }
                     else
                     {
                         isMoving = true;
                     }
                 }
-                else if (SimpleControls.IsDownDown() && canMove.Down)
+                else if (SimpleControls.IsDownDown(player.PlayerNumber) && canMove.Down)
                 {
                     lookTo.Y = 1;
                     isMoving = true;
                 }
-                else if (SimpleControls.IsUpDown() && canMove.Up)
+                else if (SimpleControls.IsUpDown(player.PlayerNumber) && canMove.Up)
                 {
                     lookTo.Y = -1;
                     isMoving = true;
                 }
             }
-            if (SimpleControls.IsADown() && !player.IsFiring())
+            if (SimpleControls.IsADown(player.PlayerNumber) && !player.IsFiring())
             {
                 player.Fire(Bullet.TargetTypes.Any);
 
@@ -660,18 +725,18 @@ namespace WizardOfWor
             }
         }
 
-        private void CheckPlayerDeath()
+        private void CheckPlayerDeath(Player player)
         {
-            if (_player.Visible)
+            if (player != null && player.Visible)
             {
                 for (int i = 0; i < _enemies.Count; i++)
                 {
                     Character enemy = _enemies[i];
-                    int distanceX = (int)MathF.Abs(enemy.PixelPositionX - _player.PixelPositionX);
-                    int distanceY = (int)MathF.Abs(enemy.PixelPositionY - _player.PixelPositionY);
+                    int distanceX = (int)MathF.Abs(enemy.PixelPositionX - player.PixelPositionX);
+                    int distanceY = (int)MathF.Abs(enemy.PixelPositionY - player.PixelPositionY);
                     if (distanceX <= 2 && distanceY <= 2)
                     {
-                        KillPlayer(_player);
+                        KillPlayer(player);
                     }
                 }
             }
@@ -684,58 +749,85 @@ namespace WizardOfWor
                 player.KillBullet();
             }
 
-            if (player.HasLivesLeft())
-            {
-                player.LoseLife();
-                _deaths.Add(new Death(_playerDeathSheet, player.PixelPositionX, player.PixelPositionY, Color.White, _player.CurrentRotation, _player.CurrentScale));
+            player.LoseLife();
+            _deaths.Add(new Death(_playerDeathSheet, player.PixelPositionX, player.PixelPositionY, Color.White, player.CurrentRotation, player.CurrentScale));
 
-                _playerDeathSound.Play();
-                if (_levelState == 2)
-                {
-                    NextLevel();
-                }
-                else
-                {
-                    ToCage(_player, (float)_playerDeathSound.Duration.TotalSeconds);
-                }
-            }
-            else
-            {
-                EndGame();
-            }
-
+            _playerDeathSound.Play();
+            ToCage(player, (float)_playerDeathSound.Duration.TotalSeconds);
         }
 
-        private float _toCageTimer;
-        private float _inCageTimer;
         private void ToCage(Player player, float timer)
         {
-            _toCageTimer = timer;
+            player.TimeToCage = timer;
             player.Visible = false;
         }
 
         private void ToCage(Player player)
         {
-            player.MoveTo(_currentLevel.GetCellPosition(11, 7));
-            player.LookTo(new Vector2(-1, 0));
-            player.SetFrame(1);
-            player.Visible = true;
-            player.InCage = true;
-            _inCageTimer = 0;
+            if (player != null)
+            {
+                if (_levelState == LEVEL_WIZARD)
+                {
+                    NextLevel();
+                }
+                else
+                {
+                    if (player.HasLivesLeft())
+                    {
+                        player.MoveTo(_currentLevel.GetCellPosition(player.CagePositionX, player.CagePositionY));
+                        player.LookTo(new Vector2(MathF.Sign(5 - player.CagePositionX), 0));
+                        player.SetFrame(1);
+                        player.Visible = true;
+                        player.InCage = true;
+                        player.TimeInCage = 0;
+                    }
+                    else
+                    {
+                        if (IsMultiPlayer)
+                        {
+                            if (_player1.HasLivesLeft() || _player2.HasLivesLeft())
+                            {
+                                player.Die();
+                            }
+                            else
+                            {
+                                EndGame();
+                            }
+                        }
+                        else
+                        {
+                            EndGame();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void KillPlayerBullets()
+        {
+            _player1.KillBullet();
+            if (IsMultiPlayer)
+            {
+                _player2.KillBullet();
+            }
         }
 
         private void DrawRemainingLives(Player player, SpriteBatch spriteBatch)
         {
-            int offset = player.InCage ? 1 : 0;
-            int remainingLives = player.RemainingLives;
-            if (_toCageTimer > 0)
+            if (player != null)
             {
-                remainingLives++;
-            }
-            Vector2 startPosition = _currentLevel.GetCellPosition(11, 7);
-            for (int i = 0; i < MathF.Min(2 + 1 - offset, remainingLives); i++)
-            {
-                _playerSheet.DrawFrame(1, spriteBatch, startPosition + new Vector2(-1, 0) * (i + offset) * 16 + new Vector2(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y), 0, new Vector2(-1, 1), _player.Color);
+                int offset = player.InCage ? 1 : 0;
+                int remainingLives = player.RemainingLives;
+                if (player.TimeToCage > 0)
+                {
+                    remainingLives++;
+                }
+                Vector2 startPosition = _currentLevel.GetCellPosition(player.CagePositionX, player.CagePositionY);
+                Vector2 direction = new Vector2(MathF.Sign(5 - player.CagePositionX), 0);
+                for (int i = 0; i < MathF.Min(2 + 1 - offset, remainingLives); i++)
+                {
+                    _playerSheet.DrawFrame(1, spriteBatch, startPosition + direction * (i + offset) * 16 + new Vector2(DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y), 0, new Vector2(direction.X, 1), player.Color);
+                }
             }
         }
         #endregion
@@ -754,9 +846,15 @@ namespace WizardOfWor
 
         private void SpawnWorluk()
         {
-            Worluk enemy = new Worluk(_worlukSheet, GARWOR_COLOR, _random.Next(0, 2) * 2 - 1, WORLUK_SCORE);
+            Vector2 randomPosition = _currentLevel.GetRandomPosition();
+            int preferredDirection = MathF.Sign(_currentLevel.PixelWidth / 2 - randomPosition.X);
+            if (preferredDirection == 0) 
+            {
+                preferredDirection = _random.Next(0, 2) * 2 - 1;
+            }
+            Worluk enemy = new Worluk(_worlukSheet, GARWOR_COLOR, preferredDirection, WORLUK_SCORE);
 
-            enemy.MoveTo(_currentLevel.GetRandomPosition());
+            enemy.MoveTo(randomPosition);
             enemy.LookTo(_currentLevel.PickPossibleDirection(enemy, out int _));
 
             _enemies.Add(enemy);
@@ -814,12 +912,17 @@ namespace WizardOfWor
                 }
                 enemy.Animate(deltaTime);
 
-                if (enemy.CanFireAtPlayer(_player))
+                if (enemy.CanFireAtPlayer(_player1))
+                {
+                    enemy.Fire();
+                }
+                if (enemy.CanFireAtPlayer(_player2))
                 {
                     enemy.Fire();
                 }
 
-                enemy.UpdateVisible(_player);
+                enemy.UpdateVisible(_player1);
+                enemy.UpdateVisible(_player2);
             }
         }
 

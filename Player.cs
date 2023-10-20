@@ -16,12 +16,25 @@ namespace WizardOfWor
         public int RemainingLives => _remainingLives;
         private int _currentScore;
         public int CurrentScore => _currentScore;
-        public bool InCage { get; set; }
+        public bool InCage;
+        public float TimeInCage;
+        public float TimeToCage;
 
-        public Player(SpriteSheet spriteSheet, int maxLives, SoundEffect shootSound = null) : base(spriteSheet, shootSound)
+        private int _cagePositionX;
+        public int CagePositionX => _cagePositionX;
+        private int _cagePositionY;
+        public int CagePositionY => _cagePositionY;
+
+        private SimpleControls.PlayerNumber _playerNumber;
+        public SimpleControls.PlayerNumber PlayerNumber => _playerNumber;
+
+        public Player(SpriteSheet spriteSheet, int maxLives, SoundEffect shootSound, int cageX, int cageY, SimpleControls.PlayerNumber playerNumber) : base(spriteSheet, shootSound)
         {
             _maxLives = maxLives;
             _remainingLives = maxLives;
+            _cagePositionX = cageX;
+            _cagePositionY = cageY;
+            _playerNumber = playerNumber;
         }
 
         public void ResetLives()
@@ -41,7 +54,7 @@ namespace WizardOfWor
 
         public bool HasLivesLeft()
         {
-            return _remainingLives > 0;
+            return _remainingLives >= 0;
         }
 
         public Bullet Fire()

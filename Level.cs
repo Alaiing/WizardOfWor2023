@@ -116,7 +116,6 @@ namespace WizardOfWor
                 TunnelsOpen = !TunnelsOpen;
                 _tunnelTimer -= TUNNEL_COOLDOWN;
             }
-            TunnelsOpen = false;
         }
 
         public Vector2 GetCellPosition(int x, int y)
@@ -239,13 +238,25 @@ namespace WizardOfWor
             tunnel = NO_TUNNEL;
             if (IsOnGridCell(character.PixelPositionX, character.PixelPositionY))
             {
-                if (character is Wizard)
-                {
-                    Debug.WriteLine($"Debug wizard : {character.PixelPositionX}, {character.PixelPositionX}");
-                }
+                int sideOfLevel = MathF.Sign(PixelWidth / 2 - character.PixelPositionX);
+                bool isOnWrongSide = character.PreferredHorizontalDirection != 0 && sideOfLevel == character.PreferredHorizontalDirection;
+
                 if (character.CanChangeDirection)
                 {
                     CanMoveData canMove = CanMove(character.PixelPositionX, character.PixelPositionY, out tunnel);
+
+                    if (character.PreferredHorizontalDirection != 0 && tunnel != NO_TUNNEL)
+                    {
+                        character.CanChangeDirection = false;
+                        if (tunnel == TUNNEL_RIGHT)
+                        {
+                            return new Vector2(1, 0);
+                        }
+                        if (tunnel == TUNNEL_LEFT)
+                        {
+                            return new Vector2(-1, 0);
+                        }
+                    }
 
                     List<Vector2> possibleDirections = new();
                     if (character.MoveDirection.X > 0 || character.MoveDirection.X < 0)
@@ -253,15 +264,23 @@ namespace WizardOfWor
                         if (character.MoveDirection.X > 0 && (canMove.Right || tunnel == TUNNEL_RIGHT)
                             || character.MoveDirection.X < 0 && (canMove.Left || tunnel == TUNNEL_LEFT))
                         {
-                            if (character.PreferredHorizontalDirection != 0)
+                            if (isOnWrongSide)
                             {
-                                character.CanChangeDirection = false;
-                                return character.MoveDirection;
+                                if (character.PreferredHorizontalDirection == character.MoveDirection.X)
+                                {
+                                    character.CanChangeDirection = false;
+                                    return character.MoveDirection;
+                                }
+                                else if (!canMove.Down && !canMove.Up)
+                                {
+                                    possibleDirections.Add(character.MoveDirection);
+                                }
                             }
                             else
                             {
                                 possibleDirections.Add(character.MoveDirection);
                             }
+
                         }
 
                         if (canMove.Up)
@@ -282,21 +301,33 @@ namespace WizardOfWor
 
                         if (canMove.Right || tunnel == TUNNEL_RIGHT)
                         {
-                            if (character.PreferredHorizontalDirection > 0)
+                            if (isOnWrongSide)
                             {
-                                character.CanChangeDirection = false;
-                                return new Vector2(1, 0);
+                                if (isOnWrongSide && character.PreferredHorizontalDirection > 0)
+                                {
+                                    character.CanChangeDirection = false;
+                                    return new Vector2(1, 0);
+                                }
                             }
-                            possibleDirections.Add(new Vector2(1, 0));
+                            else
+                            {
+                                possibleDirections.Add(new Vector2(1, 0));
+                            }
                         }
                         if (canMove.Left || tunnel == TUNNEL_LEFT)
                         {
-                            if (character.PreferredHorizontalDirection < 0)
+                            if (isOnWrongSide)
                             {
-                                character.CanChangeDirection = false;
-                                return new Vector2(-1, 0);
+                                if (character.PreferredHorizontalDirection < 0)
+                                {
+                                    character.CanChangeDirection = false;
+                                    return new Vector2(-1, 0);
+                                }
                             }
-                            possibleDirections.Add(new Vector2(-1, 0));
+                            else
+                            {
+                                possibleDirections.Add(new Vector2(-1, 0));
+                            }
                         }
 
                         if (possibleDirections.Count == 0)

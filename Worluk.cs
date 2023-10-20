@@ -15,7 +15,7 @@ namespace WizardOfWor
         {
             SetSpeed(SPEED_5);
             SetAnimationSpeed(20);
-            _preferredHorizontalDirection = 1;
+            _preferredHorizontalDirection = preferredDirection;
         }
 
         public override bool CanFireAtPlayer(Player player)

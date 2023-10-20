@@ -35,6 +35,14 @@ namespace WizardOfWor
             _position += _velocity * deltaTime;
         }
 
+        public bool TestHit(Character character)
+        {
+            int distanceX = (int)MathF.Abs(character.PixelPositionX - PixelPositionX + character.SpriteSheet.SpritePivot.X);
+            int distanceY = (int)MathF.Abs(character.PixelPositionY - PixelPositionY + character.SpriteSheet.SpritePivot.Y);
+
+            return distanceX <= character.SpriteSheet.SpritePivot.X && distanceY <= character.SpriteSheet.SpritePivot.Y;
+        }
+
         public void Draw(SpriteBatch spriteBatch, int displayOffsetX = 0, int displayOffsetY = 0)
         {
             spriteBatch.PutPixel(PixelPositionX + displayOffsetX, PixelPositionY + displayOffsetY, _color);

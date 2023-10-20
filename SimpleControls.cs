@@ -10,35 +10,41 @@ namespace WizardOfWor
 {
     public class SimpleControls
     {
+        public enum PlayerNumber { Player1, Player2 }
         private static KeyboardState _keyboardState;
-        private static GamePadState _gamePadState;
+        private static GamePadState _gamePadStatePlayer1;
+        private static GamePadState _gamePadStatePlayer2;
 
         public static void GetStates()
         {
             _keyboardState = Keyboard.GetState();
-            _gamePadState = GamePad.GetState(PlayerIndex.One);
+            _gamePadStatePlayer1 = GamePad.GetState(PlayerIndex.One);
+            _gamePadStatePlayer2 = GamePad.GetState(PlayerIndex.Two);
         }
 
-        public static bool IsAnyMoveKeyDown()
+        public static bool IsAnyMoveKeyDown(PlayerNumber playerNumber)
         {
-            return IsLeftDown() || IsRightDown() || IsUpDown() || IsDownDown();
+            return IsLeftDown(playerNumber) || IsRightDown(playerNumber) || IsUpDown(playerNumber) || IsDownDown(playerNumber);
         }
 
-        public static bool IsLeftDown()
+        public static bool IsLeftDown(PlayerNumber playerNumber)
         {
-            if (_keyboardState.IsKeyDown(Keys.Left))
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Left)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.G))
             {
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
             {
-                if (_gamePadState.DPad.Left == ButtonState.Pressed)
+                if (currentGamepadState.DPad.Left == ButtonState.Pressed)
                 {
                     return true;
                 }
 
-                if (_gamePadState.ThumbSticks.Left.X < 0)
+                if (currentGamepadState.ThumbSticks.Left.X < 0)
                 {
                     return true;
                 }
@@ -47,21 +53,24 @@ namespace WizardOfWor
             return false;
         }
 
-        public static bool IsRightDown()
+        public static bool IsRightDown(PlayerNumber playerNumber)
         {
-            if (_keyboardState.IsKeyDown(Keys.Right))
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Right)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.J))
             {
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
             {
-                if (_gamePadState.DPad.Right == ButtonState.Pressed)
+                if (currentGamepadState.DPad.Right == ButtonState.Pressed)
                 {
                     return true;
                 }
 
-                if (_gamePadState.ThumbSticks.Left.X > 0)
+                if (currentGamepadState.ThumbSticks.Left.X > 0)
                 {
                     return true;
                 }
@@ -69,21 +78,24 @@ namespace WizardOfWor
 
             return false;
         }
-        public static bool IsUpDown()
+        public static bool IsUpDown(PlayerNumber playerNumber)
         {
-            if (_keyboardState.IsKeyDown(Keys.Up))
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Up)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.Y))
             {
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
             {
-                if (_gamePadState.DPad.Up == ButtonState.Pressed)
+                if (_gamePadStatePlayer1.DPad.Up == ButtonState.Pressed)
                 {
                     return true;
                 }
 
-                if (_gamePadState.ThumbSticks.Left.Y > 0)
+                if (currentGamepadState.ThumbSticks.Left.Y > 0)
                 {
                     return true;
                 }
@@ -91,39 +103,24 @@ namespace WizardOfWor
 
             return false;
         }
-        public static bool IsDownDown()
+        public static bool IsDownDown(PlayerNumber playerNumber)
         {
-            if (_keyboardState.IsKeyDown(Keys.Down))
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Down)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.H))
             {
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
             {
-                if (_gamePadState.DPad.Down == ButtonState.Pressed)
+                if (currentGamepadState.DPad.Down == ButtonState.Pressed)
                 {
                     return true;
                 }
 
-                if (_gamePadState.ThumbSticks.Left.Y < 0)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static bool IsADown()
-        {
-            if (_keyboardState.IsKeyDown(Keys.Space))
-            {
-                return true;
-            }
-
-            if (_gamePadState.IsConnected)
-            {
-                if (_gamePadState.Buttons.A == ButtonState.Pressed)
+                if (currentGamepadState.ThumbSticks.Left.Y < 0)
                 {
                     return true;
                 }
@@ -132,16 +129,40 @@ namespace WizardOfWor
             return false;
         }
 
-        public static bool IsBDown()
+        public static bool IsADown(PlayerNumber playerNumber)
         {
-            if (_keyboardState.IsKeyDown(Keys.Enter))
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Space)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.F))
             {
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
             {
-                if (_gamePadState.Buttons.B == ButtonState.Pressed)
+                if (currentGamepadState.Buttons.A == ButtonState.Pressed)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsBDown(PlayerNumber playerNumber)
+        {
+            if (playerNumber == PlayerNumber.Player1 && _keyboardState.IsKeyDown(Keys.Enter)
+                || playerNumber == PlayerNumber.Player2 && _keyboardState.IsKeyDown(Keys.D))
+            {
+                return true;
+            }
+
+            GamePadState currentGamepadState = playerNumber == PlayerNumber.Player1 ? _gamePadStatePlayer1 : _gamePadStatePlayer2;
+
+            if (currentGamepadState.IsConnected)
+            {
+                if (currentGamepadState.Buttons.B == ButtonState.Pressed)
                 {
                     return true;
                 }
@@ -157,9 +178,9 @@ namespace WizardOfWor
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            if (_gamePadStatePlayer1.IsConnected)
             {
-                if (_gamePadState.Buttons.Start == ButtonState.Pressed)
+                if (_gamePadStatePlayer1.Buttons.Start == ButtonState.Pressed)
                 {
                     return true;
                 }
@@ -175,9 +196,9 @@ namespace WizardOfWor
                 return true;
             }
 
-            if (_gamePadState.IsConnected)
+            if (_gamePadStatePlayer1.IsConnected)
             {
-                if (_gamePadState.Buttons.Back == ButtonState.Pressed)
+                if (_gamePadStatePlayer1.Buttons.Back == ButtonState.Pressed)
                 {
                     return true;
                 }
