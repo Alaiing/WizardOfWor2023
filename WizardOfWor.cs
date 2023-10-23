@@ -18,8 +18,6 @@ namespace WizardOfWor
         private const int DISPLAY_OFFSET_X = 4;
         private const int DISPLAY_OFFSET_Y = 7;
 
-        private const int PLAYER_MAX_LIVES = 2;
-        private const float PLAYER_SPEED = 30;
         private const int BURWOR_AMOUNT = 6;
         private readonly Color PLAYER1_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
         private readonly Color PLAYER2_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
@@ -122,13 +120,14 @@ namespace WizardOfWor
             _renderTarget = new RenderTarget2D(GraphicsDevice, SCREEN_WIDTH, SCREEN_HEIGHT);
             _scoreModifier = 1;
             _applyDoubleScore = false;
-            _player1 = SpawnPlayer(SimpleControls.PlayerNumber.Player1, PLAYER1_COLOR, 11, 7);
 
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
+            ConfigManager.LoadConfig("config.ini");
+
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
             _playerSheet = new SpriteSheet(Content, "player", 8, 8, 4, 4);
@@ -155,8 +154,9 @@ namespace WizardOfWor
             _worlukDeathSound = Content.Load<SoundEffect>("worluk-kill");
             _wizardDeathSound = Content.Load<SoundEffect>("wizard-kill");
 
-
             _musicManager.LoadMusicSounds(Content);
+
+            _player1 = SpawnPlayer(SimpleControls.PlayerNumber.Player1, PLAYER1_COLOR, 11, 7);
         }
 
         private float _levelStartTimer;
@@ -639,9 +639,10 @@ namespace WizardOfWor
         #region Player
         private Player SpawnPlayer(SimpleControls.PlayerNumber playerNumber, Color color, int cageX, int cageY)
         {
-            Player player = new Player(_playerSheet, PLAYER_MAX_LIVES, _playerShootSound, cageX, cageY, playerNumber);
-            player.SetSpeed(PLAYER_SPEED);
-            player.SetAnimationSpeed(10);
+            int maxlives = ConfigManager.GetConfig(Constants.PLAYER_MAX_LIVES, Constants.DEFAULT_PLAYER_MAX_LIVES);
+            Player player = new Player(_playerSheet, maxlives, _playerShootSound, cageX, cageY, playerNumber);
+            player.SetSpeed(ConfigManager.GetConfig(Constants.PLAYER_SPEED, Constants.DEFAULT_PLAYER_SPEED));
+            player.SetAnimationSpeed(ConfigManager.GetConfig(Constants.PLAYER_ANIMATION_SPEED, Constants.DEFAULT_PLAYER_ANIMATION_SPEED));
             player.SetColor(color);
 
             return player;
@@ -876,6 +877,10 @@ namespace WizardOfWor
             for (int i = 0; i < _enemies.Count; i++)
             {
                 Enemy enemy = _enemies[i];
+
+                int direction = enemy.PixelPositionX - _player1.PixelPositionX;
+                enemy.PreferredHorizontalDirection = Math.Sign(direction);
+
                 enemy.Update(deltaTime);
 
                 float speedModificator = _currentLevel.CurrentThreshold == _currentStage / 2 && _currentStage % 2 != 0 ? 1.1f : 1f;

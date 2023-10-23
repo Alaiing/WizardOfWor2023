@@ -11,16 +11,24 @@
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="config.ini" />
     <None Remove="Content\Level1.txt" />
     <None Remove="Icon.ico" />
     <None Remove="Icon.bmp" />
     <None Remove="Level1.txt" />
+    <None Remove="LevelEmpty.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="config.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Level1.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Level2.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="LevelEmpty.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
