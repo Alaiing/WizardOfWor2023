@@ -301,13 +301,10 @@ namespace WizardOfWor
 
                         if (canMove.Right || tunnel == TUNNEL_RIGHT)
                         {
-                            if (isOnWrongSide)
+                            if (isOnWrongSide && character.PreferredHorizontalDirection > 0)
                             {
-                                if (isOnWrongSide && character.PreferredHorizontalDirection > 0)
-                                {
-                                    character.CanChangeDirection = false;
-                                    return new Vector2(1, 0);
-                                }
+                                character.CanChangeDirection = false;
+                                return new Vector2(1, 0);
                             }
                             else
                             {
@@ -316,13 +313,10 @@ namespace WizardOfWor
                         }
                         if (canMove.Left || tunnel == TUNNEL_LEFT)
                         {
-                            if (isOnWrongSide)
+                            if (isOnWrongSide && character.PreferredHorizontalDirection < 0)
                             {
-                                if (character.PreferredHorizontalDirection < 0)
-                                {
-                                    character.CanChangeDirection = false;
-                                    return new Vector2(-1, 0);
-                                }
+                                character.CanChangeDirection = false;
+                                return new Vector2(-1, 0);
                             }
                             else
                             {
@@ -332,6 +326,14 @@ namespace WizardOfWor
 
                         if (possibleDirections.Count == 0)
                             possibleDirections.Add(-character.MoveDirection);
+                    }
+
+                    if (possibleDirections.Count > 1)
+                    {
+                        if (isOnWrongSide && character.PreferredHorizontalDirection != 0)
+                        {
+                            possibleDirections.Remove(new Vector2(-character.PreferredHorizontalDirection, 0));
+                        }
                     }
 
                     Vector2 chosenDirection = possibleDirections[_random.Next(0, possibleDirections.Count)];

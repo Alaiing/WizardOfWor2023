@@ -58,9 +58,9 @@ namespace WizardOfWor
             _worlukLoopInstance.IsLooped = true;
         }
 
-        private void SetTempo(float tempo)
+        private void SetTempo(float tempoBPM)
         {
-            _currentTempoBPS = tempo / 60;
+            _currentTempoBPS = tempoBPM / 60;
         }
 
         public void StartMusic(float tempo)
@@ -117,7 +117,7 @@ namespace WizardOfWor
                         _musicNotesInstances[_currentMusicNote].Play();
                         if (previousTempo != _currentTempoBPS)
                         {
-                            _currentMusiqueTime = _currentMusiqueTime - 1f / previousTempo;
+                            _currentMusiqueTime = 0;
                         }
                         else
                         {

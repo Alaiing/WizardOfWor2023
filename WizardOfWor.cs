@@ -279,6 +279,7 @@ namespace WizardOfWor
         {
             _musicManager.StopMusic();
             _worlukEscapeSound.Play();
+            _levelStateTimer = 0;
             _levelState = LEVEL_WORLUK_ESCAPE;
         }
 
