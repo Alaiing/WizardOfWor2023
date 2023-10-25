@@ -10,7 +10,6 @@ namespace WizardOfWor
 {
     public class Player : ShootingCharacter
     {
-        private const int EXTRA_LIFE_SCORE = 10000;
         private readonly int _maxLives;
         private int _remainingLives;
         public int RemainingLives => _remainingLives;
@@ -28,6 +27,8 @@ namespace WizardOfWor
         private SimpleControls.PlayerNumber _playerNumber;
         public SimpleControls.PlayerNumber PlayerNumber => _playerNumber;
 
+        private int _extraLifeScore;
+
         public Player(SpriteSheet spriteSheet, int maxLives, SoundEffect shootSound, int cageX, int cageY, SimpleControls.PlayerNumber playerNumber) : base(spriteSheet, shootSound)
         {
             _maxLives = maxLives;
@@ -35,6 +36,7 @@ namespace WizardOfWor
             _cagePositionX = cageX;
             _cagePositionY = cageY;
             _playerNumber = playerNumber;
+            _extraLifeScore = ConfigManager.GetConfig(Constants.EXTRA_LIFE_SCORE, Constants.DEFAULT_EXTRA_LIFE_SCORE);
         }
 
         public void ResetLives()
@@ -64,10 +66,9 @@ namespace WizardOfWor
 
         public void IncreaseScore(int score)
         {
-            if (_currentScore < EXTRA_LIFE_SCORE && _currentScore + score >= EXTRA_LIFE_SCORE)
+            if (_currentScore < _extraLifeScore && _currentScore + score >= _extraLifeScore)
                 GainLife();
             _currentScore += score;
-            Debug.WriteLine($"Player score: {_currentScore}");
         }
 
         public void ResetScore() 

@@ -45,8 +45,8 @@ namespace WizardOfWor
         public void LoadMusicSounds(ContentManager content)
         {
             _musicNoteSounds = new SoundEffect[2];
-            _musicNoteSounds[0] = content.Load<SoundEffect>("C-long-bouche");
-            _musicNoteSounds[1] = content.Load<SoundEffect>("G#-long-bouche");
+            _musicNoteSounds[0] = content.Load<SoundEffect>("C-long");
+            _musicNoteSounds[1] = content.Load<SoundEffect>("G#-long");
             _musicNotesInstances = new SoundEffectInstance[2];
             _musicNotesInstances[0] = _musicNoteSounds[0].CreateInstance();
             _musicNotesInstances[1] = _musicNoteSounds[1].CreateInstance();

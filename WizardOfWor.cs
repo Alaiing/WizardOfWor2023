@@ -139,9 +139,9 @@ namespace WizardOfWor
             _currentLevel = _levels[0];
             _levelColor = LEVEL_DEFAULT_COLOR;
 
-            _playerShootSound = Content.Load<SoundEffect>("piou-bouche");
-            _levelIntroSound = Content.Load<SoundEffect>("intro-bouche");
-            _playerDeathSound = Content.Load<SoundEffect>("death-bouche");
+            _playerShootSound = Content.Load<SoundEffect>("piou");
+            _levelIntroSound = Content.Load<SoundEffect>("intro");
+            _playerDeathSound = Content.Load<SoundEffect>("death");
             _worlukEscapeSound = Content.Load<SoundEffect>("worluk-escape");
             _worlukDeathSound = Content.Load<SoundEffect>("worluk-kill");
             _wizardDeathSound = Content.Load<SoundEffect>("wizard-kill");

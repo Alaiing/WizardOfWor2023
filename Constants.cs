@@ -59,5 +59,7 @@ namespace WizardOfWor
         public const int DEFAULT_WIZARD_SCORE = 1000;
         public const string OTHER_PLAYER_SCORE = "OTHER_PLAYER_SCORE";
         public const int DEFAULT_OTHER_PLAYER_SCORE = 1000;
+        public const string EXTRA_LIFE_SCORE = "EXTRA_LIFE_SCORE";
+        public const int DEFAULT_EXTRA_LIFE_SCORE = 10000;
     }
 }
