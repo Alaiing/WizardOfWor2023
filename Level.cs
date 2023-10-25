@@ -425,5 +425,10 @@ namespace WizardOfWor
             int renderIndex = x + y * PixelWidth;
             return renderIndex < 0 || renderIndex >= _renderData.Length || _renderData[renderIndex].A > 0;
         }
+
+        public bool IsInsideWalls(int x, int y)
+        {
+            return x > _cellWidth && y > _cellHeight && x < (_width - 1) * _cellWidth - 4 && y < (_height - 1) * _cellHeight;
+        }
     }
 }

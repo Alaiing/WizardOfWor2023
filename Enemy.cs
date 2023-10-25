@@ -10,12 +10,6 @@ namespace WizardOfWor
 {
     public class Enemy : ShootingCharacter
     {
-        protected float SPEED_1 = 5f;
-        protected float SPEED_2 = 10f;
-        protected float SPEED_3 = 15f;
-        protected float SPEED_4 = 25f;
-        protected float SPEED_5 = 40f;
-
         private float INVISIBILITY_TIMER = 5f;
         private bool _canBecomeInvisible;
         private float _visibilityTimer;
@@ -33,15 +27,15 @@ namespace WizardOfWor
         public Enemy(SpriteSheet spriteSheet, Color color, bool canBecomeInvisible, int scorePoints) : base(spriteSheet, null)
         {
             _thresholdSpeeds = new float[5];
-            _thresholdSpeeds[0] = SPEED_1;
-            _thresholdSpeeds[1] = SPEED_2;
-            _thresholdSpeeds[2] = SPEED_3;
-            _thresholdSpeeds[3] = SPEED_4;
-            _thresholdSpeeds[4] = SPEED_5;
+            _thresholdSpeeds[0] = ConfigManager.GetConfig(Constants.ENEMY_SPEED_1, Constants.DEFAULT_ENEMY_SPEED_1);
+            _thresholdSpeeds[1] = ConfigManager.GetConfig(Constants.ENEMY_SPEED_2, Constants.DEFAULT_ENEMY_SPEED_2);
+            _thresholdSpeeds[2] = ConfigManager.GetConfig(Constants.ENEMY_SPEED_3, Constants.DEFAULT_ENEMY_SPEED_3);
+            _thresholdSpeeds[3] = ConfigManager.GetConfig(Constants.ENEMY_SPEED_4, Constants.DEFAULT_ENEMY_SPEED_4);
+            _thresholdSpeeds[4] = ConfigManager.GetConfig(Constants.ENEMY_SPEED_5, Constants.DEFAULT_ENEMY_SPEED_5);
             _canBecomeInvisible = canBecomeInvisible;
             Visible = !_canBecomeInvisible;
-            SetSpeed(SPEED_1);
-            SetAnimationSpeed(SPEED_1);
+            SetSpeed(_thresholdSpeeds[0]);
+            SetAnimationSpeed(_thresholdSpeeds[0]);
             SetColor(color);
             _preferredHorizontalDirection = 0;
             _scorePoints = scorePoints;
@@ -82,7 +76,7 @@ namespace WizardOfWor
 
         public Bullet Fire()
         {
-            _commonBullet = base.Fire(Bullet.TargetTypes.Player);
+            _commonBullet = base.Fire(Bullet.TargetTypes.Player, ConfigManager.GetConfig(Constants.ENEMY_BULLET_SPEED, Constants.DEFAULT_ENEMY_BULLET_SPEED));
 
             return _commonBullet;
         }

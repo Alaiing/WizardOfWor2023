@@ -13,7 +13,7 @@ namespace WizardOfWor
     {
         public Worluk(SpriteSheet spriteSheet, Color color, int preferredDirection, int score) : base(spriteSheet, color, false, score)
         {
-            SetSpeed(SPEED_5);
+            SetSpeed(ConfigManager.GetConfig(Constants.WORLUK_SPEED, Constants.DEFAULT_WORLUK_SPEED));
             SetAnimationSpeed(20);
             _preferredHorizontalDirection = preferredDirection;
         }

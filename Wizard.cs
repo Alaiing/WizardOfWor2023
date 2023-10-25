@@ -11,16 +11,17 @@ namespace WizardOfWor
 {
     internal class Wizard : Enemy
     {
-        public const float TELEPORT_COOLDOWN = 1f;
         private readonly Level _level;
 
         private float _teleportTimer;
+        private float _teleportCooldown;
 
         public Wizard(SpriteSheet spriteSheet, Level level, int score) : base(spriteSheet, Color.White, canBecomeInvisible:false, score) 
         {
-            SetSpeed(SPEED_2);
+            SetSpeed(ConfigManager.GetConfig(Constants.WIZARD_SPEED, Constants.DEFAULT_WIZARD_SPEED));
             SetAnimationSpeed(10);
             _preferredHorizontalDirection = 0;
+            _teleportCooldown = ConfigManager.GetConfig(Constants.WIZARD_TELEPORT_COOLDOWN, Constants.DEFAULT_WIZARD_TELEPORT_COOLDOWN);
             _level = level;
         }
 
@@ -28,15 +29,16 @@ namespace WizardOfWor
         {
             base.Update(deltaTime);
             _teleportTimer += deltaTime;
-            if (_teleportTimer > TELEPORT_COOLDOWN) 
+            if (_teleportTimer > _teleportCooldown) 
             { 
-                _teleportTimer -= TELEPORT_COOLDOWN;
+                _teleportTimer -= _teleportCooldown;
                 MoveTo(_level.GetRandomPosition());
                 LookTo(_level.PickPossibleDirection(this, out int _));
                 if (!IsAnyEnemyFiring())
                 {
                     Fire();
                 }
+                CameraShake.Shake(1, 100, 0.2f);
             }
         }
 

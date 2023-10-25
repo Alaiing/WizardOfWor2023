@@ -8,7 +8,6 @@ namespace WizardOfWor
 {
     public class Bullet
     {
-        const float DEFAULT_SPEED = 50f;
         public enum TargetTypes { Player, Any }
 
         private readonly Color _color;
@@ -21,11 +20,11 @@ namespace WizardOfWor
         private readonly TargetTypes _targetType;
         public TargetTypes TargetType => _targetType;
 
-        public Bullet(ShootingCharacter origin, TargetTypes targetType, float speed = 0)
+        public Bullet(ShootingCharacter origin, TargetTypes targetType, float speed)
         {
             _origin = origin;
             _position = origin.Position + origin.SpriteSheet.SpritePivot;
-            _velocity = origin.MoveDirection * (speed == 0 ? DEFAULT_SPEED : speed);
+            _velocity = origin.MoveDirection * speed;
             _color = origin.Color;
             _targetType = targetType;
         }

@@ -59,7 +59,7 @@ namespace WizardOfWor
 
         public Bullet Fire()
         {
-            return base.Fire(Bullet.TargetTypes.Any);
+            return base.Fire(Bullet.TargetTypes.Any, ConfigManager.GetConfig(Constants.PLAYER_BULLET_SPEED, Constants.DEFAULT_PLAYER_BULLET_SPEED));
         }
 
         public void IncreaseScore(int score)

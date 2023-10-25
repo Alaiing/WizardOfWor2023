@@ -19,9 +19,9 @@ namespace WizardOfWor
             _shootSound = shootSound;
         }
 
-        public virtual Bullet Fire(Bullet.TargetTypes targetType)
+        public virtual Bullet Fire(Bullet.TargetTypes targetType, float speed)
         {
-            _bullet = new Bullet(this, targetType);
+            _bullet = new Bullet(this, targetType, speed);
             if (_shootSound != null)
             {
                 _currentShootSound = _shootSound.CreateInstance();
