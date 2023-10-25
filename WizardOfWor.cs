@@ -220,7 +220,7 @@ namespace WizardOfWor
             switch (_levelState)
             {
                 case LEVEL_KILL_ENEMIES:
-                    if (_currentStage >= 0)
+                    if (_currentStage > 0)
                     {
                         _levelState = LEVEL_WORLUK;
                         SpawnWorluk();
