@@ -8,6 +8,9 @@ namespace WizardOfWor
 {
     public static class Constants
     {
+        public const string SCREEN_SCALE = "SCREEN_SCALE";
+        public const int DEFAULT_SCREEN_SCALE = 8;
+
         public const string CAMERA_SHAKE = "CAMERA_SHAKE";
         public const bool DEFAULT_CAMERA_SHAKE = false;
 

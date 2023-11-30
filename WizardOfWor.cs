@@ -14,9 +14,10 @@ namespace WizardOfWor
     {
         private const int SCREEN_WIDTH = 160;
         private const int SCREEN_HEIGHT = 114;
-        private const int SCREEN_SCALE = 8;
         private const int DISPLAY_OFFSET_X = 4;
         private const int DISPLAY_OFFSET_Y = 7;
+
+        private int _screenScale;
 
         private readonly Color PLAYER1_COLOR = new Color(0.863f, 0.690f, 0.286f, 1f);
         private readonly Color PLAYER2_COLOR = new Color(0.416f, 0.459f, 0.933f, 1f);
@@ -98,8 +99,10 @@ namespace WizardOfWor
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            _graphics.PreferredBackBufferWidth = SCREEN_WIDTH * SCREEN_SCALE;
-            _graphics.PreferredBackBufferHeight = SCREEN_HEIGHT * SCREEN_SCALE;
+            ConfigManager.LoadConfig("config.ini");
+            _screenScale = ConfigManager.GetConfig(Constants.SCREEN_SCALE, 8);
+            _graphics.PreferredBackBufferWidth = SCREEN_WIDTH * _screenScale;
+            _graphics.PreferredBackBufferHeight = SCREEN_HEIGHT * _screenScale;
             _graphics.ApplyChanges();
 
             _random = new Random();
@@ -118,7 +121,6 @@ namespace WizardOfWor
 
         protected override void LoadContent()
         {
-            ConfigManager.LoadConfig("config.ini");
 
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
@@ -602,7 +604,7 @@ namespace WizardOfWor
 
             GraphicsDevice.SetRenderTarget(null);
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
-            _spriteBatch.Draw(_renderTarget, new Rectangle((int)MathF.Floor(CameraShake.ShakeOffset.X), (int)MathF.Floor(CameraShake.ShakeOffset.Y), SCREEN_WIDTH * SCREEN_SCALE, SCREEN_HEIGHT * SCREEN_SCALE), Color.White);
+            _spriteBatch.Draw(_renderTarget, new Rectangle((int)MathF.Floor(CameraShake.ShakeOffset.X), (int)MathF.Floor(CameraShake.ShakeOffset.Y), SCREEN_WIDTH * _screenScale, SCREEN_HEIGHT * _screenScale), Color.White);
             DrawScore(_spriteBatch, _player1, 280);
             DrawScore(_spriteBatch, _player2, 89);
             _spriteBatch.End();
@@ -616,9 +618,9 @@ namespace WizardOfWor
             {
                 int score = player != null ? player.CurrentScore : 0;
                 Color color = player != null ? player.Color : PLAYER1_COLOR;
-                Vector2 position = new Vector2(positionX * SCREEN_SCALE / 2, DISPLAY_OFFSET_Y * SCREEN_SCALE);
-                Vector2 scale = new Vector2(SCREEN_SCALE / 2, SCREEN_SCALE / 2);
-                Vector2 positionDelta = new Vector2(-16 * SCREEN_SCALE / 2, 0);
+                Vector2 position = new Vector2(positionX * _screenScale / 2, DISPLAY_OFFSET_Y * _screenScale);
+                Vector2 scale = new Vector2(_screenScale / 2, _screenScale / 2);
+                Vector2 positionDelta = new Vector2(-16 * _screenScale / 2, 0);
                 for (int i = 0; i < 5; i++)
                 {
                     int number = score % 10;

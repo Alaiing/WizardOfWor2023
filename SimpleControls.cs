@@ -90,7 +90,7 @@ namespace WizardOfWor
 
             if (currentGamepadState.IsConnected)
             {
-                if (_gamePadStatePlayer1.DPad.Up == ButtonState.Pressed)
+                if (currentGamepadState.DPad.Up == ButtonState.Pressed)
                 {
                     return true;
                 }
